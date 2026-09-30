@@ -4,13 +4,13 @@ services:
     command: ['midnight-proof-server', '-v']
     container_name: "membrane_proof_server"
     ports:
-      - '6300'
+      - '6300:6300'
 
   indexer:
     image: 'midnightntwrk/indexer-standalone:4.0.1'
     container_name: 'membrane_indexer'
     ports:
-      - '8088'
+      - '8088:8088'
     environment:
       RUST_LOG: "indexer=info,chain_indexer=info,indexer_api=info,wallet_indexer=info,indexer_common=info,fastrace_opentelemetry=info,info"
       # Random 32-byte hex-encoded secret used to make the standalone indexer run.
@@ -24,7 +24,7 @@ services:
     image: 'midnightntwrk/midnight-node:0.22.3'
     container_name: 'membrane_node'
     ports:
-      - "9944"
+      - "9944:9944"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9944/health" ]
       interval: 2s

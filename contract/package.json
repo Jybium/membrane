@@ -1,5 +1,5 @@
 {
-  "name": "@midnight-ntwrk/bboard-contract",
+  "name": "@midnight-ntwrk/membrane",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -13,23 +13,55 @@
     }
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/bboard.compact ./dist",
-    "ci": "npm run compact && npm run typecheck && npm run lint && npm run build && npm run test",
-    "compact": "compact compile src/bboard.compact ./src/managed/bboard",
+    "compile": "compact compile membrane.compact compiled/membrane",
+    "deploy-local": "npx tsx src/membrane.deploy.local.ts",
+    "deploy-preview": "npx tsx src/membrane.deploy.preview.ts",
+    "membrane-interact": "npx tsx src/membrane.interact.ts",
+    "clean": "rm -rf contract/compiled .midnight-state.json .midnight-wallet-state",
+
+
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/membrane.compact ./dist",
+
+
+    "ci": "npm run compile && npm run typecheck && npm run lint && npm run build && npm run test",
     "lint": "eslint src",
     "prepack": "npm build",
     "test": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/ledger": "^4.0.0",
+    "@midnight-ntwrk/midnight-js": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+    "@midnight-ntwrk/wallet": "5.0.0",
+    "@midnight-ntwrk/wallet-api": "5.0.0",
+    "@midnight-ntwrk/wallet-sdk": "1.2.0",
+    "@midnight-ntwrk/zswap": "^4.0.0",
+    "@scure/bip39": "2.2.0",
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.1"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^9.39.4",
+    "@types/ws": "^8.18.2",
     "@typescript-eslint/eslint-plugin": "^8.61.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "globals": "^17.11.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1"
   }
 }

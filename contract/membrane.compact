@@ -1,0 +1,85 @@
+pragma language_version >= 0.23;
+import CompactStandardLibrary;
+
+
+export enum TrialStatusEnum { active, inactive };
+export ledger trialCounter: Counter;
+
+struct TrialInfo{
+  diseaseCode: Opaque<"string">,
+  minAge: Uint<8>,
+  maxAge: Uint<8>,
+  minPatientSampleCount: Uint<16>,
+  status: TrialStatusEnum,
+  enrolledCount: Uint<16>,
+  researchLabIdHash: Bytes<32>,
+  trialIdHash: Bytes<32>,
+};
+
+export ledger activeTrials: Map< Bytes<32>, TrialInfo >; // trailIdHash -> TrialInfo
+export ledger inactiveTrials: Map< Bytes<32>, TrialInfo >; // trailIdHash -> TrialInfo
+export ledger trialsEnrollments: Map< Bytes<32>, Set<Bytes<32>> >; // trailIdHash -> Set<hospitalsIdHashes>
+
+
+witness getPrivateKey(): Bytes<32>;
+witness getPrivateTrialTag(): Bytes<32>; // this is meant to be passed by the research lab when creating a trial  
+
+
+// todo: add a circuit that creates trial for a research lab
+export circuit createTrial(
+  diseaseCode: Opaque<"string">,
+  minAge: Uint<8>,
+  maxAge: Uint<8>,
+  minPatientSampleCount: Uint<16>,
+): Bytes<32>{
+  assert(minPatientSampleCount > 0, "minimum patient sample count must be greater than 0");
+  assert(maxAge >= minAge, "maximum age must be greater than or equal to minimum age");
+
+  const derivedPublicKey = derivePublicKey(getPrivateKey());
+  const derivedTrialTag = derivePrivateTrialTag(getPrivateTrialTag());
+  
+  const trialIdHash = disclose(derivedTrialTag);
+
+  activeTrials.insert(
+    trialIdHash,
+    TrialInfo {
+      diseaseCode: disclose(diseaseCode),
+      minAge: disclose(minAge),
+      maxAge: disclose(maxAge),
+      minPatientSampleCount: disclose(minPatientSampleCount),
+      status: TrialStatusEnum.active,
+      enrolledCount: disclose(0),
+      researchLabIdHash: disclose(derivedPublicKey),
+      trialIdHash: trialIdHash,
+    }
+  );
+
+  trialCounter += 1;
+  return trialIdHash;
+}
+
+
+// todo: add a circuit where the research lab can change the active status of a trial to inactive
+
+// todo: add a circuit that enrolls a hospital into an active trial
+
+// todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial
+
+// todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial 
+
+// todo: add a circuit where all can get all active trials
+
+// todo: add a circuit where all can get all inactive trials
+
+
+
+
+
+// helper functions
+export circuit derivePublicKey(privateKey: Bytes<32>): Bytes<32>{
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "membrane:identity"), privateKey]);
+}
+
+export circuit derivePrivateTrialTag(privateKey: Bytes<32>): Bytes<32>{
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "membrane:trialTag"), privateKey]);
+}
