@@ -13,6 +13,7 @@ export type ImpureCircuits<PS> = {
               minAge_0: bigint,
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -21,6 +22,7 @@ export type ProvableCircuits<PS> = {
               minAge_0: bigint,
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
 }
 
 export type PureCircuits = {
@@ -34,6 +36,7 @@ export type Circuits<PS> = {
               minAge_0: bigint,
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
   derivePublicKey(context: __compactRuntime.CircuitContext<PS>,
                   privateKey_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   derivePrivateTrialTag(context: __compactRuntime.CircuitContext<PS>,

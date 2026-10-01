@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "dcf319ba93d47dfe81a51e4fca469f04d2205dcf157af71f8c9808558c46729f"
+const contractAddress = "e09ba042778cb4851e4593702a8c4dc807db7fa3b7c70820d7717d6b6fcbf301"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -161,12 +161,13 @@ async function createTrial(
   minAge: number | bigint,
   maxAge: number | bigint,
   minPatientSampleCount: number | bigint,
+  privateData: MembranePrivateState
 ){
   const contract = await findDeployedContract(providers, {
     contractAddress: contractAddress,  
     compiledContract: compiledContract as any,
     privateStateId: PRIVATE_STATE_ID,
-    initialPrivateState: researchLabPrivateData, 
+    initialPrivateState: privateData, 
   })
 
   const finalizedTxData = await contract.callTx.createTrial(
@@ -204,10 +205,31 @@ console.log("--- Latest Inputed ---");
 }
 
 
+async function cancelTrial(
+  privateData: MembranePrivateState
+){
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    initialPrivateState: privateData, 
+  })
+
+  const finalizedTxData = await contract.callTx.cancelTrial()
+
+  // converting the circuit result from bytes to a hex string
+  const trialIdHashHex = Buffer.from(finalizedTxData.private.result).toString('hex')
+
+  console.log("Tx Hash:", finalizedTxData.public.txHash)
+  console.log("Cancelled Trial ID (hash):", trialIdHashHex)
+}
+
+
 // Membrane contract calls
 
-// await createTrial("ICD-004", 12n, 15n, 200n)
-await getLatestActiveTrials()
+// await createTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
+// await getLatestActiveTrials()
+await cancelTrial(researchLabPrivateData)
 
 await walletCtx.wallet.stop()
 process.exit(0)

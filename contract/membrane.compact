@@ -59,6 +59,33 @@ export circuit createTrial(
 }
 
 
+export circuit cancelTrial(): Bytes<32> {
+  const derivedPublicKey = derivePublicKey(getPrivateKey());
+  const derivedTrialTag = derivePrivateTrialTag(getPrivateTrialTag());
+
+  const trialIdHash = disclose(derivedTrialTag);
+
+  assert(activeTrials.member(trialIdHash), "Trial does not exist or has been cancelled");
+  const activeTrial = activeTrials.lookup(trialIdHash);
+  assert(activeTrial.researchLabIdHash == disclose(derivedPublicKey), "You are not the research lab that created this trial");
+
+
+  const inactiveTrial = TrialInfo{
+    ...activeTrial,
+    status: TrialStatusEnum.inactive
+  };
+  
+  inactiveTrials.insert(
+    trialIdHash,
+    inactiveTrial
+  );
+
+  activeTrials.remove(trialIdHash);
+
+  return inactiveTrial.trialIdHash;
+}
+
+
 // todo: add a circuit where the research lab can change the active status of a trial to inactive
 
 // todo: add a circuit that enrolls a hospital into an active trial

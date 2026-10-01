@@ -43,6 +43,17 @@
       }
     },
     {
+      "name": "cancelTrial",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "derivePublicKey",
       "pure": true,
       "proof": false,
