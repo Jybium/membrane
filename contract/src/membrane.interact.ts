@@ -140,11 +140,6 @@ function stringToBytes32(s: string): Uint8Array {
 }
 
 
-// helper function the converts bytes32 to a string
-function bytes32ToString(b: Uint8Array): string {
-  return new TextDecoder().decode(b).replace(/\0+$/, "")
-}
-
 const researchLabPrivateData: MembranePrivateState = {
   privateKeyBytes: stringToBytes32("ResearchLab1x09$!@"),
   privateTrialTagBytes: stringToBytes32("RL1-0001")
