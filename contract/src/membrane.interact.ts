@@ -193,6 +193,7 @@ console.log("--- Active Trials Summary ---");
     console.log(`Disease Code: ${registry.diseaseCode}`)
     console.log(`Min Age: ${registry.minAge}`)
     console.log(`Max Age: ${registry.maxAge}`)
+    console.log(`Status: ${registry.status}`)
     console.log(`Min Patient Sample Count: ${registry.minPatientSampleCount}`)
 
     console.log('====================')
