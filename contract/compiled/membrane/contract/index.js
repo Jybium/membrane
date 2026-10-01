@@ -218,6 +218,42 @@ export class Contract {
         partialProofData.output = { value: _descriptor_6.toValue(result_0), alignment: _descriptor_6.alignment() };
         return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
+      isTrialActive: (...args_1) => {
+        if (args_1.length !== 2) {
+          throw new __compactRuntime.CompactError(`isTrialActive: expected 2 arguments (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        const trialIdHash_0 = args_1[1];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('isTrialActive',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'membrane.compact line 132 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        if (!(trialIdHash_0.buffer instanceof ArrayBuffer && trialIdHash_0.BYTES_PER_ELEMENT === 1 && trialIdHash_0.length === 32)) {
+          __compactRuntime.typeError('isTrialActive',
+                                     'argument 1 (argument 2 as invoked from Typescript)',
+                                     'membrane.compact line 132 char 1',
+                                     'Bytes<32>',
+                                     trialIdHash_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: {
+            value: _descriptor_0.toValue(trialIdHash_0),
+            alignment: _descriptor_0.alignment()
+          },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._isTrialActive_0(context,
+                                               partialProofData,
+                                               trialIdHash_0);
+        partialProofData.output = { value: _descriptor_6.toValue(result_0), alignment: _descriptor_6.alignment() };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
       derivePublicKey(context, ...args_1) {
         return { result: pureCircuits.derivePublicKey(...args_1), context };
       },
@@ -228,12 +264,14 @@ export class Contract {
     this.impureCircuits = {
       createTrial: this.circuits.createTrial,
       cancelTrial: this.circuits.cancelTrial,
-      trialEnrollment: this.circuits.trialEnrollment
+      trialEnrollment: this.circuits.trialEnrollment,
+      isTrialActive: this.circuits.isTrialActive
     };
     this.provableCircuits = {
       createTrial: this.circuits.createTrial,
       cancelTrial: this.circuits.cancelTrial,
-      trialEnrollment: this.circuits.trialEnrollment
+      trialEnrollment: this.circuits.trialEnrollment,
+      isTrialActive: this.circuits.isTrialActive
     };
   }
   initialState(...args_0) {
@@ -263,6 +301,7 @@ export class Contract {
     state_0.setOperation('createTrial', new __compactRuntime.ContractOperation());
     state_0.setOperation('cancelTrial', new __compactRuntime.ContractOperation());
     state_0.setOperation('trialEnrollment', new __compactRuntime.ContractOperation());
+    state_0.setOperation('isTrialActive', new __compactRuntime.ContractOperation());
     const context = __compactRuntime.createCircuitContext(__compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
     const partialProofData = {
       input: { value: [], alignment: [] },
@@ -710,6 +749,25 @@ export class Contract {
                                        { ins: { cached: false, n: 1 } },
                                        { ins: { cached: true, n: 1 } }]);
     return true;
+  }
+  _isTrialActive_0(context, partialProofData, trialIdHash_0) {
+    const publicTrialId_0 = trialIdHash_0;
+    return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                     partialProofData,
+                                                                     [
+                                                                      { dup: { n: 0 } },
+                                                                      { idx: { cached: false,
+                                                                               pushPath: false,
+                                                                               path: [
+                                                                                      { tag: 'value',
+                                                                                        value: { value: _descriptor_2.toValue(1n),
+                                                                                                 alignment: _descriptor_2.alignment() } }] } },
+                                                                      { push: { storage: false,
+                                                                                value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                             alignment: _descriptor_0.alignment() }).encode() } },
+                                                                      'member',
+                                                                      { popeq: { cached: true,
+                                                                                 result: undefined } }]).value);
   }
   _derivePublicKey_0(privateKey_0) {
     return this._persistentHash_0([new Uint8Array([109, 101, 109, 98, 114, 97, 110, 101, 58, 105, 100, 101, 110, 116, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
@@ -1165,7 +1223,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePublicKey',
                                  'argument 1',
-                                 'membrane.compact line 143 char 1',
+                                 'membrane.compact line 149 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }
@@ -1179,7 +1237,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePrivateTrialTag',
                                  'argument 1',
-                                 'membrane.compact line 147 char 1',
+                                 'membrane.compact line 153 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }

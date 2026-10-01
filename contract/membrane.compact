@@ -127,13 +127,19 @@ export circuit trialEnrollment(
 }
 
 
-// todo: add circuit that gets details for a clinical trial
+
+// todo: add a circuit that checks if a trial is active/inactive
+export circuit isTrialActive(trialIdHash: Bytes<32>): Boolean {
+  const publicTrialId = disclose(trialIdHash);
+  return activeTrials.member(publicTrialId);
+}
+
+
+// todo: add circuit that gets details for an active clinical trial
 
 // todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial
 
 // todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial 
-
-// todo: add a circuit where all can get all inactive trials
 
 
 

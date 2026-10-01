@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "f899318e16edc1de532543983ba9190ecb2ea50377a01f09a5eac63225e51150"
+const contractAddress = "1caf543774fa388ee68c3bc47b2290f4e1eb5af295aff83d709d98881f3ef46f"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -238,7 +238,7 @@ async function cancelTrial(
 
 
 async function trialEnrollment(
-  trialIdHash: Uint8Array,
+  trialIdBytes: Uint8Array,
   privateData: MembranePrivateState
 ){
   const contract = await findDeployedContract(providers, {
@@ -248,11 +248,28 @@ async function trialEnrollment(
     initialPrivateState: privateData, 
   })
 
-  const finalizedTxData = await contract.callTx.trialEnrollment(trialIdHash)
+  const finalizedTxData = await contract.callTx.trialEnrollment(trialIdBytes)
 
   const result = finalizedTxData.private.result
   console.log("Trial enrollment completed: ", result)
 }
+
+async function isTrialActive(
+  trialIdBytes: Uint8Array
+){
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    // no private data is needed for circuit computation
+  })
+
+  const finalizedTxData = await contract.callTx.isTrialActive(trialIdBytes)
+
+  const circuitResult = finalizedTxData.private.result
+  console.log("Is trial active: ", circuitResult)
+}
+
 
 const trialIdHashHex = "f006cbd0974d319413c265cef619d1ef6257cf7a2872af0e171e04bc8f773cff"
 
@@ -267,6 +284,7 @@ const trialIdBytes = Buffer.from(
 // await getLatestActiveTrials()
 // await cancelTrial(researchLabPrivateData)
 // await trialEnrollment(trialIdBytes, hospitalPrivateData)
+// await isTrialActive(trialIdBytes)
 
 await walletCtx.wallet.stop()
 process.exit(0)

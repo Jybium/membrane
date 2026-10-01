@@ -71,6 +71,23 @@
       }
     },
     {
+      "name": "isTrialActive",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "trialIdHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
       "name": "derivePublicKey",
       "pure": true,
       "proof": false,
