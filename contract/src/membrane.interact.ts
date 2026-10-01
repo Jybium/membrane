@@ -184,12 +184,15 @@ async function createTrial(
 }
 
 
-async  function getActiveTrials(){
-  // Assuming contractLedgerData is the complete ledger from contractState.data
-console.log("--- Active Trials Summary ---");
 
+async  function getLatestActiveTrials(){
+  // Assuming contractLedgerData is the complete ledger from contractState.data
+console.log("--- Latest Inputed ---");
+
+  // this returns the latest inputted active trial. you cannot directly return a whole value of a Map<k,v> ledger state-type 
   for (const [trialHash, registry] of contractLedgerData.activeTrials) {
     console.log(`Trial ID: ${Buffer.from(trialHash).toString('hex')}`)
+    console.log(`Research lab ID: ${Buffer.from(registry.researchLabIdHash).toString('hex')}`)
     console.log(`Disease Code: ${registry.diseaseCode}`)
     console.log(`Min Age: ${registry.minAge}`)
     console.log(`Max Age: ${registry.maxAge}`)
@@ -202,8 +205,9 @@ console.log("--- Active Trials Summary ---");
 
 
 // Membrane contract calls
-// await createTrial("ICD-001", 3n, 6n, 20n)
-await getActiveTrials()
+
+// await createTrial("ICD-004", 12n, 15n, 200n)
+await getLatestActiveTrials()
 
 await walletCtx.wallet.stop()
 process.exit(0)
