@@ -67,8 +67,6 @@ export circuit createTrial(
 
 // todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial 
 
-// todo: add a circuit where all can get all active trials
-
 // todo: add a circuit where all can get all inactive trials
 
 

@@ -18,10 +18,11 @@ import { createWallet, persistWalletState, unshieldedToken, type WalletContext }
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
 import { contracts, networkId, types, utils } from '@midnight-ntwrk/midnight-js';
 
-
+import * as __compactRuntime from '@midnight-ntwrk/compact-runtime';
 
 //importing the compiled Javascript code of the Membrane contract 
-import { Contract, Ledger, Witnesses } from '../compiled/membrane/contract/index.js';
+// import { Contract, Ledger, Witnesses } from '../compiled/membrane/contract/index.js';
+import { Contract, Ledger, Witnesses, ledger } from '../compiled/membrane/contract/index.js';
 import { MembranePrivateState } from './witnesses';
 import { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 
@@ -34,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "f08e6dd61e0b47720bec66897123b6adfd704d47a7122a5cbd154b39d5f7b17f"
+const contractAddress = "dcf319ba93d47dfe81a51e4fca469f04d2205dcf157af71f8c9808558c46729f"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -119,10 +120,18 @@ const seed = SEED;
 const walletCtx = await createWallet({ network, networkConfig, seed });
 const providers = await createProviders(walletCtx);
 
-const state = await walletCtx.wallet.waitForSyncedState();
+// the on-chain, public state of a contract, which consists of the public data and balances in the contract
+const contractState = await providers.publicDataProvider.queryContractState(contractAddress)
+
+if (contractState === null) {
+  throw new Error('No contract state found at this address');
+}
+const contractLedgerData = ledger(contractState.data)
+
+const walletState = await walletCtx.wallet.waitForSyncedState();
 
 const walletAddress = walletCtx.unshieldedKeystore.getBech32Address();
-const walletBalance = state.unshielded.balances[unshieldedToken().raw] ?? 0n;
+const walletBalance = walletState.unshielded.balances[unshieldedToken().raw] ?? 0n;
 
 console.log("Wallet Address", walletAddress)
 console.log(`  Balance: ${walletBalance.toLocaleString()} tNight\n`)
@@ -175,8 +184,25 @@ async function createTrial(
 }
 
 
+async  function getActiveTrials(){
+  // Assuming contractLedgerData is the complete ledger from contractState.data
+console.log("--- Active Trials Summary ---");
+
+  for (const [trialHash, registry] of contractLedgerData.activeTrials) {
+    console.log(`Trial ID: ${Buffer.from(trialHash).toString('hex')}`)
+    console.log(`Disease Code: ${registry.diseaseCode}`)
+    console.log(`Min Age: ${registry.minAge}`)
+    console.log(`Max Age: ${registry.maxAge}`)
+    console.log(`Min Patient Sample Count: ${registry.minPatientSampleCount}`)
+
+    console.log('====================')
+  }
+}
+
+
 // Membrane contract calls
-await createTrial("ICD-001", 3n, 6n, 20n)
+// await createTrial("ICD-001", 3n, 6n, 20n)
+await getActiveTrials()
 
 await walletCtx.wallet.stop()
 process.exit(0)

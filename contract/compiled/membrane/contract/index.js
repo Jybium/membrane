@@ -794,7 +794,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePublicKey',
                                  'argument 1',
-                                 'membrane.compact line 79 char 1',
+                                 'membrane.compact line 77 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }
@@ -808,7 +808,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePrivateTrialTag',
                                  'argument 1',
-                                 'membrane.compact line 83 char 1',
+                                 'membrane.compact line 81 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }
