@@ -113,11 +113,21 @@ export circuit trialEnrollment(
     trialsEnrollments.insert(publicTrialId, default<Set<Bytes<32>>>);
     trialsEnrollments.lookup(publicTrialId).insert(hospitalPublicTag);
   }
-
+  
+  // updating trial enrollment count
+  const newEnrolledCount: Uint<16> = (activeTrials.lookup(publicTrialId).enrolledCount + 1) as Uint<16>;
+  activeTrials.insert(
+    publicTrialId, 
+    TrialInfo {
+      ...activeTrials.lookup(publicTrialId),
+      enrolledCount: newEnrolledCount
+    }
+  );
   return true;
 }
 
 
+// todo: add circuit that gets details for a clinical trial
 
 // todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial
 

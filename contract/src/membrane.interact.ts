@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "f8c1bd9ffa54441946951a6114c213304af1ba76f1aaea1fa9f5525f15b809f9"
+const contractAddress = "f899318e16edc1de532543983ba9190ecb2ea50377a01f09a5eac63225e51150"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -210,6 +210,7 @@ console.log("--- Latest Inputed ---");
     console.log(`Max Age: ${registry.maxAge}`)
     console.log(`Status: ${registry.status}`)
     console.log(`Min Patient Sample Count: ${registry.minPatientSampleCount}`)
+    console.log(`Enrolled Count: ${registry.enrolledCount}`)
 
     console.log('====================')
   }
@@ -265,7 +266,7 @@ const trialIdBytes = Buffer.from(
 // await createTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
 // await getLatestActiveTrials()
 // await cancelTrial(researchLabPrivateData)
-await trialEnrollment(trialIdBytes, hospitalPrivateData)
+// await trialEnrollment(trialIdBytes, hospitalPrivateData)
 
 await walletCtx.wallet.stop()
 process.exit(0)
