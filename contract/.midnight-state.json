@@ -4,9 +4,9 @@
   "wallets": {},
   "deployments": {
     "undeployed": {
-      "address": "e09ba042778cb4851e4593702a8c4dc807db7fa3b7c70820d7717d6b6fcbf301",
+      "address": "f8c1bd9ffa54441946951a6114c213304af1ba76f1aaea1fa9f5525f15b809f9",
       "deployer": "mn_addr_undeployed1h3ssm5ru2t6eqy4g3she78zlxn96e36ms6pq996aduvmateh9p9sk96u7s",
-      "deployedAt": "2026-10-01T15:20:38.515Z"
+      "deployedAt": "2026-10-01T16:53:09.031Z"
     }
   }
 }

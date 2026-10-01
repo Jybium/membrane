@@ -54,6 +54,23 @@
       }
     },
     {
+      "name": "trialEnrollment",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "trialIdHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
       "name": "derivePublicKey",
       "pure": true,
       "proof": false,
@@ -107,6 +124,15 @@
       "result type": {
         "type-name": "Bytes",
         "length": 32
+      }
+    },
+    {
+      "name": "getHospitalPatientsAggregate",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Uint",
+        "maxval": 65535
       }
     }
   ],

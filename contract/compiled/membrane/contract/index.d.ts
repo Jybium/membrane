@@ -5,6 +5,7 @@ export enum TrialStatusEnum { active = 0, inactive = 1 }
 export type Witnesses<PS> = {
   getPrivateKey(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
   getPrivateTrialTag(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, Uint8Array];
+  getHospitalPatientsAggregate(context: __compactRuntime.WitnessContext<Ledger, PS>): [PS, bigint];
 }
 
 export type ImpureCircuits<PS> = {
@@ -14,6 +15,8 @@ export type ImpureCircuits<PS> = {
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  trialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                  trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -23,6 +26,8 @@ export type ProvableCircuits<PS> = {
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  trialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                  trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
 }
 
 export type PureCircuits = {
@@ -37,6 +42,8 @@ export type Circuits<PS> = {
               maxAge_0: bigint,
               minPatientSampleCount_0: bigint): __compactRuntime.CircuitResults<PS, Uint8Array>;
   cancelTrial(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, Uint8Array>;
+  trialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                  trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   derivePublicKey(context: __compactRuntime.CircuitContext<PS>,
                   privateKey_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   derivePrivateTrialTag(context: __compactRuntime.CircuitContext<PS>,

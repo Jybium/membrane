@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "e09ba042778cb4851e4593702a8c4dc807db7fa3b7c70820d7717d6b6fcbf301"
+const contractAddress = "f8c1bd9ffa54441946951a6114c213304af1ba76f1aaea1fa9f5525f15b809f9"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +62,12 @@ const witnesses: Witnesses<MembranePrivateState> = {
     privateState, 
     privateState.privateTrialTagBytes ?? new Uint8Array(0)
   ],
+
+  getHospitalPatientsAggregate: ({ privateState }:  WitnessContext<Ledger, MembranePrivateState>) => [
+    privateState, 
+    privateState.hospitalPatientsAggregate ?? 0n
+  ],
+
 };
 
 
@@ -154,6 +160,11 @@ const researchLabPrivateData: MembranePrivateState = {
   privateTrialTagBytes: stringToBytes32("RL1-0001")
 }
 
+const hospitalPrivateData: MembranePrivateState = {
+  privateKeyBytes: stringToBytes32("Hospital1x09$!@"),
+  hospitalPatientsAggregate: 200n
+}
+
 
 // Membrane circuit interactions
 async function createTrial(
@@ -225,11 +236,36 @@ async function cancelTrial(
 }
 
 
+async function trialEnrollment(
+  trialIdHash: Uint8Array,
+  privateData: MembranePrivateState
+){
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    initialPrivateState: privateData, 
+  })
+
+  const finalizedTxData = await contract.callTx.trialEnrollment(trialIdHash)
+
+  const result = finalizedTxData.private.result
+  console.log("Trial enrollment completed: ", result)
+}
+
+const trialIdHashHex = "f006cbd0974d319413c265cef619d1ef6257cf7a2872af0e171e04bc8f773cff"
+
+const trialIdBytes = Buffer.from(
+  trialIdHashHex, 
+  'hex'
+)
+
 // Membrane contract calls
 
 // await createTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
 // await getLatestActiveTrials()
-await cancelTrial(researchLabPrivateData)
+// await cancelTrial(researchLabPrivateData)
+await trialEnrollment(trialIdBytes, hospitalPrivateData)
 
 await walletCtx.wallet.stop()
 process.exit(0)
