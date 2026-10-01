@@ -127,8 +127,7 @@ export circuit trialEnrollment(
 }
 
 
-
-// todo: add a circuit that checks if a trial is active/inactive
+// circuit that checks if a trial is active/inactive
 export circuit isTrialActive(trialIdHash: Bytes<32>): Boolean {
   const publicTrialId = disclose(trialIdHash);
   return activeTrials.member(publicTrialId);
@@ -136,6 +135,15 @@ export circuit isTrialActive(trialIdHash: Bytes<32>): Boolean {
 
 
 // todo: add circuit that gets details for an active clinical trial
+export circuit activeTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
+  const publicTrialId = disclose(trialIdHash);
+  assert(activeTrials.member(publicTrialId), "Trial does not exist or has been cancelled");
+  return activeTrials.lookup(publicTrialId);
+}
+
+
+// todo: add circuit that gets details for an inactive trial
+
 
 // todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial
 

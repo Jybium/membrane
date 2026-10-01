@@ -19,6 +19,16 @@ export type ImpureCircuits<PS> = {
                   trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrialActive(context: __compactRuntime.CircuitContext<PS>,
                 trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  activeTrialDetail(context: __compactRuntime.CircuitContext<PS>,
+                    trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, { diseaseCode: string,
+                                                                                      minAge: bigint,
+                                                                                      maxAge: bigint,
+                                                                                      minPatientSampleCount: bigint,
+                                                                                      status: TrialStatusEnum,
+                                                                                      enrolledCount: bigint,
+                                                                                      researchLabIdHash: Uint8Array,
+                                                                                      trialIdHash: Uint8Array
+                                                                                    }>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -32,6 +42,16 @@ export type ProvableCircuits<PS> = {
                   trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrialActive(context: __compactRuntime.CircuitContext<PS>,
                 trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  activeTrialDetail(context: __compactRuntime.CircuitContext<PS>,
+                    trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, { diseaseCode: string,
+                                                                                      minAge: bigint,
+                                                                                      maxAge: bigint,
+                                                                                      minPatientSampleCount: bigint,
+                                                                                      status: TrialStatusEnum,
+                                                                                      enrolledCount: bigint,
+                                                                                      researchLabIdHash: Uint8Array,
+                                                                                      trialIdHash: Uint8Array
+                                                                                    }>;
 }
 
 export type PureCircuits = {
@@ -50,6 +70,16 @@ export type Circuits<PS> = {
                   trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   isTrialActive(context: __compactRuntime.CircuitContext<PS>,
                 trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
+  activeTrialDetail(context: __compactRuntime.CircuitContext<PS>,
+                    trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, { diseaseCode: string,
+                                                                                      minAge: bigint,
+                                                                                      maxAge: bigint,
+                                                                                      minPatientSampleCount: bigint,
+                                                                                      status: TrialStatusEnum,
+                                                                                      enrolledCount: bigint,
+                                                                                      researchLabIdHash: Uint8Array,
+                                                                                      trialIdHash: Uint8Array
+                                                                                    }>;
   derivePublicKey(context: __compactRuntime.CircuitContext<PS>,
                   privateKey_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   derivePrivateTrialTag(context: __compactRuntime.CircuitContext<PS>,
