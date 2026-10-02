@@ -145,9 +145,9 @@ export circuit activeTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
 // todo: add circuit that gets details for an inactive trial
 
 
-// todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial
+// todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial (active/inactive)
 
-// todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial 
+// todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial (active/inactive)
 
 
 
