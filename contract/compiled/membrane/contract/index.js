@@ -40,25 +40,25 @@ class _TrialInfo_0 {
 
 const _descriptor_5 = new _TrialInfo_0();
 
-const _descriptor_6 = new __compactRuntime.CompactTypeVector(2, _descriptor_0);
+const _descriptor_6 = __compactRuntime.CompactTypeBoolean;
 
 const _descriptor_7 = new __compactRuntime.CompactTypeUnsignedInteger(18446744073709551615n, 8);
 
-const _descriptor_8 = __compactRuntime.CompactTypeBoolean;
+const _descriptor_8 = new __compactRuntime.CompactTypeVector(2, _descriptor_0);
 
 class _Either_0 {
   alignment() {
-    return _descriptor_8.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment()));
+    return _descriptor_6.alignment().concat(_descriptor_0.alignment().concat(_descriptor_0.alignment()));
   }
   fromValue(value_0) {
     return {
-      is_left: _descriptor_8.fromValue(value_0),
+      is_left: _descriptor_6.fromValue(value_0),
       left: _descriptor_0.fromValue(value_0),
       right: _descriptor_0.fromValue(value_0)
     }
   }
   toValue(value_0) {
-    return _descriptor_8.toValue(value_0.is_left).concat(_descriptor_0.toValue(value_0.left).concat(_descriptor_0.toValue(value_0.right)));
+    return _descriptor_6.toValue(value_0.is_left).concat(_descriptor_0.toValue(value_0.left).concat(_descriptor_0.toValue(value_0.right)));
   }
 }
 
@@ -98,6 +98,9 @@ export class Contract {
     if (typeof(witnesses_0.getPrivateTrialTag) !== 'function') {
       throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named getPrivateTrialTag');
     }
+    if (typeof(witnesses_0.getHospitalPatientsAggregate) !== 'function') {
+      throw new __compactRuntime.CompactError('first (witnesses) argument to Contract constructor does not contain a function-valued field named getHospitalPatientsAggregate');
+    }
     this.witnesses = witnesses_0;
     this.circuits = {
       createTrial: (...args_1) => {
@@ -112,28 +115,28 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('createTrial',
                                      'argument 1 (as invoked from Typescript)',
-                                     'membrane.compact line 29 char 1',
+                                     'membrane.compact line 32 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(typeof(minAge_0) === 'bigint' && minAge_0 >= 0n && minAge_0 <= 255n)) {
           __compactRuntime.typeError('createTrial',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'membrane.compact line 29 char 1',
+                                     'membrane.compact line 32 char 1',
                                      'Uint<0..256>',
                                      minAge_0)
         }
         if (!(typeof(maxAge_0) === 'bigint' && maxAge_0 >= 0n && maxAge_0 <= 255n)) {
           __compactRuntime.typeError('createTrial',
                                      'argument 3 (argument 4 as invoked from Typescript)',
-                                     'membrane.compact line 29 char 1',
+                                     'membrane.compact line 32 char 1',
                                      'Uint<0..256>',
                                      maxAge_0)
         }
         if (!(typeof(minPatientSampleCount_0) === 'bigint' && minPatientSampleCount_0 >= 0n && minPatientSampleCount_0 <= 65535n)) {
           __compactRuntime.typeError('createTrial',
                                      'argument 4 (argument 5 as invoked from Typescript)',
-                                     'membrane.compact line 29 char 1',
+                                     'membrane.compact line 32 char 1',
                                      'Uint<0..65536>',
                                      minPatientSampleCount_0)
         }
@@ -156,6 +159,137 @@ export class Contract {
         partialProofData.output = { value: _descriptor_0.toValue(result_0), alignment: _descriptor_0.alignment() };
         return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
       },
+      cancelTrial: (...args_1) => {
+        if (args_1.length !== 1) {
+          throw new __compactRuntime.CompactError(`cancelTrial: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('cancelTrial',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'membrane.compact line 66 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: { value: [], alignment: [] },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._cancelTrial_0(context, partialProofData);
+        partialProofData.output = { value: _descriptor_0.toValue(result_0), alignment: _descriptor_0.alignment() };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
+      trialEnrollment: (...args_1) => {
+        if (args_1.length !== 2) {
+          throw new __compactRuntime.CompactError(`trialEnrollment: expected 2 arguments (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        const trialIdHash_0 = args_1[1];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('trialEnrollment',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'membrane.compact line 94 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        if (!(trialIdHash_0.buffer instanceof ArrayBuffer && trialIdHash_0.BYTES_PER_ELEMENT === 1 && trialIdHash_0.length === 32)) {
+          __compactRuntime.typeError('trialEnrollment',
+                                     'argument 1 (argument 2 as invoked from Typescript)',
+                                     'membrane.compact line 94 char 1',
+                                     'Bytes<32>',
+                                     trialIdHash_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: {
+            value: _descriptor_0.toValue(trialIdHash_0),
+            alignment: _descriptor_0.alignment()
+          },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._trialEnrollment_0(context,
+                                                 partialProofData,
+                                                 trialIdHash_0);
+        partialProofData.output = { value: _descriptor_6.toValue(result_0), alignment: _descriptor_6.alignment() };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
+      isTrialActive: (...args_1) => {
+        if (args_1.length !== 2) {
+          throw new __compactRuntime.CompactError(`isTrialActive: expected 2 arguments (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        const trialIdHash_0 = args_1[1];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('isTrialActive',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'membrane.compact line 131 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        if (!(trialIdHash_0.buffer instanceof ArrayBuffer && trialIdHash_0.BYTES_PER_ELEMENT === 1 && trialIdHash_0.length === 32)) {
+          __compactRuntime.typeError('isTrialActive',
+                                     'argument 1 (argument 2 as invoked from Typescript)',
+                                     'membrane.compact line 131 char 1',
+                                     'Bytes<32>',
+                                     trialIdHash_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: {
+            value: _descriptor_0.toValue(trialIdHash_0),
+            alignment: _descriptor_0.alignment()
+          },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._isTrialActive_0(context,
+                                               partialProofData,
+                                               trialIdHash_0);
+        partialProofData.output = { value: _descriptor_6.toValue(result_0), alignment: _descriptor_6.alignment() };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
+      activeTrialDetail: (...args_1) => {
+        if (args_1.length !== 2) {
+          throw new __compactRuntime.CompactError(`activeTrialDetail: expected 2 arguments (as invoked from Typescript), received ${args_1.length}`);
+        }
+        const contextOrig_0 = args_1[0];
+        const trialIdHash_0 = args_1[1];
+        if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
+          __compactRuntime.typeError('activeTrialDetail',
+                                     'argument 1 (as invoked from Typescript)',
+                                     'membrane.compact line 138 char 1',
+                                     'CircuitContext',
+                                     contextOrig_0)
+        }
+        if (!(trialIdHash_0.buffer instanceof ArrayBuffer && trialIdHash_0.BYTES_PER_ELEMENT === 1 && trialIdHash_0.length === 32)) {
+          __compactRuntime.typeError('activeTrialDetail',
+                                     'argument 1 (argument 2 as invoked from Typescript)',
+                                     'membrane.compact line 138 char 1',
+                                     'Bytes<32>',
+                                     trialIdHash_0)
+        }
+        const context = { ...contextOrig_0, gasCost: __compactRuntime.emptyRunningCost() };
+        const partialProofData = {
+          input: {
+            value: _descriptor_0.toValue(trialIdHash_0),
+            alignment: _descriptor_0.alignment()
+          },
+          output: undefined,
+          publicTranscript: [],
+          privateTranscriptOutputs: []
+        };
+        const result_0 = this._activeTrialDetail_0(context,
+                                                   partialProofData,
+                                                   trialIdHash_0);
+        partialProofData.output = { value: _descriptor_5.toValue(result_0), alignment: _descriptor_5.alignment() };
+        return { result: result_0, context: context, proofData: partialProofData, gasCost: context.gasCost };
+      },
       derivePublicKey(context, ...args_1) {
         return { result: pureCircuits.derivePublicKey(...args_1), context };
       },
@@ -163,8 +297,20 @@ export class Contract {
         return { result: pureCircuits.derivePrivateTrialTag(...args_1), context };
       }
     };
-    this.impureCircuits = { createTrial: this.circuits.createTrial };
-    this.provableCircuits = { createTrial: this.circuits.createTrial };
+    this.impureCircuits = {
+      createTrial: this.circuits.createTrial,
+      cancelTrial: this.circuits.cancelTrial,
+      trialEnrollment: this.circuits.trialEnrollment,
+      isTrialActive: this.circuits.isTrialActive,
+      activeTrialDetail: this.circuits.activeTrialDetail
+    };
+    this.provableCircuits = {
+      createTrial: this.circuits.createTrial,
+      cancelTrial: this.circuits.cancelTrial,
+      trialEnrollment: this.circuits.trialEnrollment,
+      isTrialActive: this.circuits.isTrialActive,
+      activeTrialDetail: this.circuits.activeTrialDetail
+    };
   }
   initialState(...args_0) {
     if (args_0.length !== 1) {
@@ -191,6 +337,10 @@ export class Contract {
     stateValue_0 = stateValue_0.arrayPush(__compactRuntime.StateValue.newNull());
     state_0.data = new __compactRuntime.ChargedState(stateValue_0);
     state_0.setOperation('createTrial', new __compactRuntime.ContractOperation());
+    state_0.setOperation('cancelTrial', new __compactRuntime.ContractOperation());
+    state_0.setOperation('trialEnrollment', new __compactRuntime.ContractOperation());
+    state_0.setOperation('isTrialActive', new __compactRuntime.ContractOperation());
+    state_0.setOperation('activeTrialDetail', new __compactRuntime.ContractOperation());
     const context = __compactRuntime.createCircuitContext(__compactRuntime.dummyContractAddress(), constructorContext_0.initialZswapLocalState.coinPublicKey, state_0.data, constructorContext_0.initialPrivateState);
     const partialProofData = {
       input: { value: [], alignment: [] },
@@ -249,7 +399,7 @@ export class Contract {
     }
   }
   _persistentHash_0(value_0) {
-    const result_0 = __compactRuntime.persistentHash(_descriptor_6, value_0);
+    const result_0 = __compactRuntime.persistentHash(_descriptor_8, value_0);
     return result_0;
   }
   _getPrivateKey_0(context, partialProofData) {
@@ -283,6 +433,23 @@ export class Contract {
     partialProofData.privateTranscriptOutputs.push({
       value: _descriptor_0.toValue(result_0),
       alignment: _descriptor_0.alignment()
+    });
+    return result_0;
+  }
+  _getHospitalPatientsAggregate_0(context, partialProofData) {
+    const witnessContext_0 = __compactRuntime.createWitnessContext(ledger(context.currentQueryContext.state), context.currentPrivateState, context.currentQueryContext.address);
+    const [nextPrivateState_0, result_0] = this.witnesses.getHospitalPatientsAggregate(witnessContext_0);
+    context.currentPrivateState = nextPrivateState_0;
+    if (!(typeof(result_0) === 'bigint' && result_0 >= 0n && result_0 <= 65535n)) {
+      __compactRuntime.typeError('getHospitalPatientsAggregate',
+                                 'return value',
+                                 'membrane.compact line 28 char 1',
+                                 'Uint<0..65536>',
+                                 result_0)
+    }
+    partialProofData.privateTranscriptOutputs.push({
+      value: _descriptor_3.toValue(result_0),
+      alignment: _descriptor_3.alignment()
     });
     return result_0;
   }
@@ -345,6 +512,340 @@ export class Contract {
                                        { ins: { cached: true, n: 1 } }]);
     return trialIdHash_0;
   }
+  _cancelTrial_0(context, partialProofData) {
+    const derivedPublicKey_0 = this._derivePublicKey_0(this._getPrivateKey_0(context,
+                                                                             partialProofData));
+    const derivedTrialTag_0 = this._derivePrivateTrialTag_0(this._getPrivateTrialTag_0(context,
+                                                                                       partialProofData));
+    const trialIdHash_0 = derivedTrialTag_0;
+    __compactRuntime.assert(_descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                      partialProofData,
+                                                                                      [
+                                                                                       { dup: { n: 0 } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                                                                       { push: { storage: false,
+                                                                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(trialIdHash_0),
+                                                                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                                                                       'member',
+                                                                                       { popeq: { cached: true,
+                                                                                                  result: undefined } }]).value),
+                            'Trial does not exist or has been cancelled');
+    const activeTrial_0 = _descriptor_5.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                    partialProofData,
+                                                                                    [
+                                                                                     { dup: { n: 0 } },
+                                                                                     { idx: { cached: false,
+                                                                                              pushPath: false,
+                                                                                              path: [
+                                                                                                     { tag: 'value',
+                                                                                                       value: { value: _descriptor_2.toValue(1n),
+                                                                                                                alignment: _descriptor_2.alignment() } }] } },
+                                                                                     { idx: { cached: false,
+                                                                                              pushPath: false,
+                                                                                              path: [
+                                                                                                     { tag: 'value',
+                                                                                                       value: { value: _descriptor_0.toValue(trialIdHash_0),
+                                                                                                                alignment: _descriptor_0.alignment() } }] } },
+                                                                                     { popeq: { cached: false,
+                                                                                                result: undefined } }]).value);
+    __compactRuntime.assert(this._equal_0(activeTrial_0.researchLabIdHash,
+                                          derivedPublicKey_0),
+                            'You are not the research lab that created this trial');
+    const inactiveTrial_0 = { diseaseCode: activeTrial_0.diseaseCode,
+                              minAge: activeTrial_0.minAge,
+                              maxAge: activeTrial_0.maxAge,
+                              minPatientSampleCount:
+                                activeTrial_0.minPatientSampleCount,
+                              status: 1,
+                              enrolledCount: activeTrial_0.enrolledCount,
+                              researchLabIdHash: activeTrial_0.researchLabIdHash,
+                              trialIdHash: activeTrial_0.trialIdHash };
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { idx: { cached: false,
+                                                pushPath: true,
+                                                path: [
+                                                       { tag: 'value',
+                                                         value: { value: _descriptor_2.toValue(2n),
+                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(trialIdHash_0),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_5.toValue(inactiveTrial_0),
+                                                                                              alignment: _descriptor_5.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } },
+                                       { ins: { cached: true, n: 1 } }]);
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { idx: { cached: false,
+                                                pushPath: true,
+                                                path: [
+                                                       { tag: 'value',
+                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(trialIdHash_0),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                       { rem: { cached: false } },
+                                       { ins: { cached: true, n: 1 } }]);
+    return inactiveTrial_0.trialIdHash;
+  }
+  _trialEnrollment_0(context, partialProofData, trialIdHash_0) {
+    const derivedPublicKey_0 = this._derivePublicKey_0(this._getPrivateKey_0(context,
+                                                                             partialProofData));
+    const patientAggregateCount_0 = this._getHospitalPatientsAggregate_0(context,
+                                                                         partialProofData);
+    const publicTrialId_0 = trialIdHash_0;
+    __compactRuntime.assert(_descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                      partialProofData,
+                                                                                      [
+                                                                                       { dup: { n: 0 } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                                                                       { push: { storage: false,
+                                                                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                                                                       'member',
+                                                                                       { popeq: { cached: true,
+                                                                                                  result: undefined } }]).value),
+                            'Trial does not exist or has been cancelled');
+    __compactRuntime.assert(patientAggregateCount_0
+                            >=
+                            _descriptor_5.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                      partialProofData,
+                                                                                      [
+                                                                                       { dup: { n: 0 } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                  alignment: _descriptor_0.alignment() } }] } },
+                                                                                       { popeq: { cached: false,
+                                                                                                  result: undefined } }]).value).minPatientSampleCount,
+                            'Hospital does not meet the minimum patient sample count');
+    const hospitalPublicTag_0 = derivedPublicKey_0;
+    if (_descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                  partialProofData,
+                                                                  [
+                                                                   { dup: { n: 0 } },
+                                                                   { idx: { cached: false,
+                                                                            pushPath: false,
+                                                                            path: [
+                                                                                   { tag: 'value',
+                                                                                     value: { value: _descriptor_2.toValue(3n),
+                                                                                              alignment: _descriptor_2.alignment() } }] } },
+                                                                   { push: { storage: false,
+                                                                             value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                          alignment: _descriptor_0.alignment() }).encode() } },
+                                                                   'member',
+                                                                   { popeq: { cached: true,
+                                                                              result: undefined } }]).value))
+    {
+      __compactRuntime.queryLedgerState(context,
+                                        partialProofData,
+                                        [
+                                         { idx: { cached: false,
+                                                  pushPath: true,
+                                                  path: [
+                                                         { tag: 'value',
+                                                           value: { value: _descriptor_2.toValue(3n),
+                                                                    alignment: _descriptor_2.alignment() } },
+                                                         { tag: 'value',
+                                                           value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                    alignment: _descriptor_0.alignment() } }] } },
+                                         { push: { storage: false,
+                                                   value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(hospitalPublicTag_0),
+                                                                                                alignment: _descriptor_0.alignment() }).encode() } },
+                                         { push: { storage: true,
+                                                   value: __compactRuntime.StateValue.newNull().encode() } },
+                                         { ins: { cached: false, n: 1 } },
+                                         { ins: { cached: true, n: 2 } }]);
+    } else {
+      __compactRuntime.queryLedgerState(context,
+                                        partialProofData,
+                                        [
+                                         { idx: { cached: false,
+                                                  pushPath: true,
+                                                  path: [
+                                                         { tag: 'value',
+                                                           value: { value: _descriptor_2.toValue(3n),
+                                                                    alignment: _descriptor_2.alignment() } }] } },
+                                         { push: { storage: false,
+                                                   value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                alignment: _descriptor_0.alignment() }).encode() } },
+                                         { push: { storage: true,
+                                                   value: __compactRuntime.StateValue.newMap(
+                                                            new __compactRuntime.StateMap()
+                                                          ).encode() } },
+                                         { ins: { cached: false, n: 1 } },
+                                         { ins: { cached: true, n: 1 } }]);
+      __compactRuntime.queryLedgerState(context,
+                                        partialProofData,
+                                        [
+                                         { idx: { cached: false,
+                                                  pushPath: true,
+                                                  path: [
+                                                         { tag: 'value',
+                                                           value: { value: _descriptor_2.toValue(3n),
+                                                                    alignment: _descriptor_2.alignment() } },
+                                                         { tag: 'value',
+                                                           value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                    alignment: _descriptor_0.alignment() } }] } },
+                                         { push: { storage: false,
+                                                   value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(hospitalPublicTag_0),
+                                                                                                alignment: _descriptor_0.alignment() }).encode() } },
+                                         { push: { storage: true,
+                                                   value: __compactRuntime.StateValue.newNull().encode() } },
+                                         { ins: { cached: false, n: 1 } },
+                                         { ins: { cached: true, n: 2 } }]);
+    }
+    const newEnrolledCount_0 = ((t1) => {
+                                 if (t1 > 65535n) {
+                                   throw new __compactRuntime.CompactError('membrane.compact line 118 char 38: cast from Field or Uint value to smaller Uint value failed: ' + t1 + ' is greater than 65535');
+                                 }
+                                 return t1;
+                               })(_descriptor_5.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                            partialProofData,
+                                                                                            [
+                                                                                             { dup: { n: 0 } },
+                                                                                             { idx: { cached: false,
+                                                                                                      pushPath: false,
+                                                                                                      path: [
+                                                                                                             { tag: 'value',
+                                                                                                               value: { value: _descriptor_2.toValue(1n),
+                                                                                                                        alignment: _descriptor_2.alignment() } }] } },
+                                                                                             { idx: { cached: false,
+                                                                                                      pushPath: false,
+                                                                                                      path: [
+                                                                                                             { tag: 'value',
+                                                                                                               value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                        alignment: _descriptor_0.alignment() } }] } },
+                                                                                             { popeq: { cached: false,
+                                                                                                        result: undefined } }]).value).enrolledCount
+                                  +
+                                  1n);
+    let t_0;
+    const tmp_0 = (t_0 = _descriptor_5.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                   partialProofData,
+                                                                                   [
+                                                                                    { dup: { n: 0 } },
+                                                                                    { idx: { cached: false,
+                                                                                             pushPath: false,
+                                                                                             path: [
+                                                                                                    { tag: 'value',
+                                                                                                      value: { value: _descriptor_2.toValue(1n),
+                                                                                                               alignment: _descriptor_2.alignment() } }] } },
+                                                                                    { idx: { cached: false,
+                                                                                             pushPath: false,
+                                                                                             path: [
+                                                                                                    { tag: 'value',
+                                                                                                      value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                               alignment: _descriptor_0.alignment() } }] } },
+                                                                                    { popeq: { cached: false,
+                                                                                               result: undefined } }]).value),
+                   { diseaseCode: t_0.diseaseCode,
+                     minAge: t_0.minAge,
+                     maxAge: t_0.maxAge,
+                     minPatientSampleCount: t_0.minPatientSampleCount,
+                     status: t_0.status,
+                     enrolledCount: newEnrolledCount_0,
+                     researchLabIdHash: t_0.researchLabIdHash,
+                     trialIdHash: t_0.trialIdHash });
+    __compactRuntime.queryLedgerState(context,
+                                      partialProofData,
+                                      [
+                                       { idx: { cached: false,
+                                                pushPath: true,
+                                                path: [
+                                                       { tag: 'value',
+                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                       { push: { storage: false,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                       { push: { storage: true,
+                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_5.toValue(tmp_0),
+                                                                                              alignment: _descriptor_5.alignment() }).encode() } },
+                                       { ins: { cached: false, n: 1 } },
+                                       { ins: { cached: true, n: 1 } }]);
+    return true;
+  }
+  _isTrialActive_0(context, partialProofData, trialIdHash_0) {
+    const publicTrialId_0 = trialIdHash_0;
+    return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                     partialProofData,
+                                                                     [
+                                                                      { dup: { n: 0 } },
+                                                                      { idx: { cached: false,
+                                                                               pushPath: false,
+                                                                               path: [
+                                                                                      { tag: 'value',
+                                                                                        value: { value: _descriptor_2.toValue(1n),
+                                                                                                 alignment: _descriptor_2.alignment() } }] } },
+                                                                      { push: { storage: false,
+                                                                                value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                             alignment: _descriptor_0.alignment() }).encode() } },
+                                                                      'member',
+                                                                      { popeq: { cached: true,
+                                                                                 result: undefined } }]).value);
+  }
+  _activeTrialDetail_0(context, partialProofData, trialIdHash_0) {
+    const publicTrialId_0 = trialIdHash_0;
+    __compactRuntime.assert(_descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                                      partialProofData,
+                                                                                      [
+                                                                                       { dup: { n: 0 } },
+                                                                                       { idx: { cached: false,
+                                                                                                pushPath: false,
+                                                                                                path: [
+                                                                                                       { tag: 'value',
+                                                                                                         value: { value: _descriptor_2.toValue(1n),
+                                                                                                                  alignment: _descriptor_2.alignment() } }] } },
+                                                                                       { push: { storage: false,
+                                                                                                 value: __compactRuntime.StateValue.newCell({ value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                                                              alignment: _descriptor_0.alignment() }).encode() } },
+                                                                                       'member',
+                                                                                       { popeq: { cached: true,
+                                                                                                  result: undefined } }]).value),
+                            'Trial does not exist or has been cancelled');
+    return _descriptor_5.fromValue(__compactRuntime.queryLedgerState(context,
+                                                                     partialProofData,
+                                                                     [
+                                                                      { dup: { n: 0 } },
+                                                                      { idx: { cached: false,
+                                                                               pushPath: false,
+                                                                               path: [
+                                                                                      { tag: 'value',
+                                                                                        value: { value: _descriptor_2.toValue(1n),
+                                                                                                 alignment: _descriptor_2.alignment() } }] } },
+                                                                      { idx: { cached: false,
+                                                                               pushPath: false,
+                                                                               path: [
+                                                                                      { tag: 'value',
+                                                                                        value: { value: _descriptor_0.toValue(publicTrialId_0),
+                                                                                                 alignment: _descriptor_0.alignment() } }] } },
+                                                                      { popeq: { cached: false,
+                                                                                 result: undefined } }]).value);
+  }
   _derivePublicKey_0(privateKey_0) {
     return this._persistentHash_0([new Uint8Array([109, 101, 109, 98, 114, 97, 110, 101, 58, 105, 100, 101, 110, 116, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                    privateKey_0]);
@@ -352,6 +853,10 @@ export class Contract {
   _derivePrivateTrialTag_0(privateKey_0) {
     return this._persistentHash_0([new Uint8Array([109, 101, 109, 98, 114, 97, 110, 101, 58, 116, 114, 105, 97, 108, 84, 97, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
                                    privateKey_0]);
+  }
+  _equal_0(x0, y0) {
+    if (!x0.every((x, i) => y0[i] === x)) { return false; }
+    return true;
   }
 }
 export function ledger(stateOrChargedState) {
@@ -387,7 +892,7 @@ export function ledger(stateOrChargedState) {
         if (args_0.length !== 0) {
           throw new __compactRuntime.CompactError(`isEmpty: expected 0 arguments, received ${args_0.length}`);
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -435,7 +940,7 @@ export function ledger(stateOrChargedState) {
                                      'Bytes<32>',
                                      key_0)
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -496,7 +1001,7 @@ export function ledger(stateOrChargedState) {
         if (args_0.length !== 0) {
           throw new __compactRuntime.CompactError(`isEmpty: expected 0 arguments, received ${args_0.length}`);
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -544,7 +1049,7 @@ export function ledger(stateOrChargedState) {
                                      'Bytes<32>',
                                      key_0)
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -605,7 +1110,7 @@ export function ledger(stateOrChargedState) {
         if (args_0.length !== 0) {
           throw new __compactRuntime.CompactError(`isEmpty: expected 0 arguments, received ${args_0.length}`);
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -653,7 +1158,7 @@ export function ledger(stateOrChargedState) {
                                      'Bytes<32>',
                                      key_0)
         }
-        return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+        return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                          partialProofData,
                                                                          [
                                                                           { dup: { n: 0 } },
@@ -691,7 +1196,7 @@ export function ledger(stateOrChargedState) {
             if (args_1.length !== 0) {
               throw new __compactRuntime.CompactError(`isEmpty: expected 0 arguments, received ${args_1.length}`);
             }
-            return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+            return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                              partialProofData,
                                                                              [
                                                                               { dup: { n: 0 } },
@@ -745,7 +1250,7 @@ export function ledger(stateOrChargedState) {
                                          'Bytes<32>',
                                          elem_0)
             }
-            return _descriptor_8.fromValue(__compactRuntime.queryLedgerState(context,
+            return _descriptor_6.fromValue(__compactRuntime.queryLedgerState(context,
                                                                              partialProofData,
                                                                              [
                                                                               { dup: { n: 0 } },
@@ -783,7 +1288,8 @@ const _emptyContext = {
 };
 const _dummyContract = new Contract({
   getPrivateKey: (...args) => undefined,
-  getPrivateTrialTag: (...args) => undefined
+  getPrivateTrialTag: (...args) => undefined,
+  getHospitalPatientsAggregate: (...args) => undefined
 });
 export const pureCircuits = {
   derivePublicKey: (...args_0) => {
@@ -794,7 +1300,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePublicKey',
                                  'argument 1',
-                                 'membrane.compact line 77 char 1',
+                                 'membrane.compact line 157 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }
@@ -808,7 +1314,7 @@ export const pureCircuits = {
     if (!(privateKey_0.buffer instanceof ArrayBuffer && privateKey_0.BYTES_PER_ELEMENT === 1 && privateKey_0.length === 32)) {
       __compactRuntime.typeError('derivePrivateTrialTag',
                                  'argument 1',
-                                 'membrane.compact line 81 char 1',
+                                 'membrane.compact line 161 char 1',
                                  'Bytes<32>',
                                  privateKey_0)
     }

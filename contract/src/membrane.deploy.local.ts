@@ -43,6 +43,11 @@ const witnesses: Witnesses<MembranePrivateState> = {
     privateState, 
     privateState.privateTrialTagBytes ?? new Uint8Array(0)
   ],
+
+  getHospitalPatientsAggregate: ({ privateState }: WitnessContext<Ledger, MembranePrivateState>) => [
+    privateState, 
+    privateState.hospitalPatientsAggregate ?? 0n
+  ]
 };
 
 
@@ -318,6 +323,7 @@ async function main() {
         initialPrivateState: {
           privateKeyBytes: new Uint32Array(8),
           privateTrialTagBytes: new Uint32Array(8),
+          hospitalPatientsAggregate: BigInt(0),
         },
       });
       break;

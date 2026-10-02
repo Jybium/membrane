@@ -43,6 +43,131 @@
       }
     },
     {
+      "name": "cancelTrial",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "trialEnrollment",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "trialIdHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "isTrialActive",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "trialIdHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    },
+    {
+      "name": "activeTrialDetail",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "trialIdHash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Struct",
+        "name": "TrialInfo",
+        "elements": [
+          {
+            "name": "diseaseCode",
+            "type": {
+              "type-name": "Opaque",
+              "tsType": "string"
+            }
+          },
+          {
+            "name": "minAge",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 255
+            }
+          },
+          {
+            "name": "maxAge",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 255
+            }
+          },
+          {
+            "name": "minPatientSampleCount",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 65535
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "type-name": "Enum",
+              "name": "TrialStatusEnum",
+              "elements": [
+                "active",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "enrolledCount",
+            "type": {
+              "type-name": "Uint",
+              "maxval": 65535
+            }
+          },
+          {
+            "name": "researchLabIdHash",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          },
+          {
+            "name": "trialIdHash",
+            "type": {
+              "type-name": "Bytes",
+              "length": 32
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "derivePublicKey",
       "pure": true,
       "proof": false,
@@ -96,6 +221,15 @@
       "result type": {
         "type-name": "Bytes",
         "length": 32
+      }
+    },
+    {
+      "name": "getHospitalPatientsAggregate",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Uint",
+        "maxval": 65535
       }
     }
   ],
