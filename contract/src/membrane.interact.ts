@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "da28f2fd3b3a3372c07b8dd67e870987751da21e9f122ad1db146a84514c4103"
+const contractAddress = "810fe4be7d6e1904fd01e6f1b3ba83535673fc12435bae5e9920a987dbefccc5"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -321,6 +321,23 @@ async function inactiveTrialDetails(trialIdBytes: Uint8Array) {
 }
 
 
+async function validateTrialEnrollment(trialIdBytes: Uint8Array, privateData: MembranePrivateState) {
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    initialPrivateState: privateData,
+  })
+
+  const finalizedTxData = await contract.callTx.validateTrialEnrollment(trialIdBytes)
+
+  const result = finalizedTxData.private.result
+  console.log("===== Validate trial enrollment ======")
+  console.log("Is Valid Trial Enrollee: ", result)
+  console.log("============================")
+}
+
+
 const trialIdHashHex = "f006cbd0974d319413c265cef619d1ef6257cf7a2872af0e171e04bc8f773cff"
 
 const trialIdBytes = Buffer.from(
@@ -337,6 +354,7 @@ const trialIdBytes = Buffer.from(
 // await isTrialActive(trialIdBytes)
 // await activeTrialDetail(trialIdBytes)
 // await inactiveTrialDetails(trialIdBytes)
+await validateTrialEnrollment(trialIdBytes, hospitalPrivateData)
 
 await walletCtx.wallet.stop()
 process.exit(0)

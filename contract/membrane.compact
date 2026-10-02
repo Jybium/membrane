@@ -150,11 +150,19 @@ export circuit inactiveTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
 }
 
 
-
-// todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial (active/inactive)
-
-// todo: add a circuit where a hospital validates to the research lab that they are enrolled in their trial (active/inactive)
-
+// circuit where a hospital validates to the research lab that they are enrolled in their trial (active/inactive)
+export circuit validateTrialEnrollment(
+  trialIdHash: Bytes<32>
+): Boolean {
+  const publicTrialId = disclose(trialIdHash);
+  const derivedPublicKey = derivePublicKey(getPrivateKey());
+  const hospitalPublicTag = disclose(derivedPublicKey);
+  
+  assert(trialsEnrollments.member(publicTrialId), "Trial does not exist or has been cancelled");
+  assert(trialsEnrollments.lookup(publicTrialId).member(hospitalPublicTag), "Hospital is not enrolled in this trial");
+  
+  return true;
+}
 
 
 

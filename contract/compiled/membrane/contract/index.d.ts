@@ -39,6 +39,8 @@ export type ImpureCircuits<PS> = {
                                                                                         researchLabIdHash: Uint8Array,
                                                                                         trialIdHash: Uint8Array
                                                                                       }>;
+  validateTrialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                          trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
 }
 
 export type ProvableCircuits<PS> = {
@@ -72,6 +74,8 @@ export type ProvableCircuits<PS> = {
                                                                                         researchLabIdHash: Uint8Array,
                                                                                         trialIdHash: Uint8Array
                                                                                       }>;
+  validateTrialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                          trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
 }
 
 export type PureCircuits = {
@@ -110,6 +114,8 @@ export type Circuits<PS> = {
                                                                                         researchLabIdHash: Uint8Array,
                                                                                         trialIdHash: Uint8Array
                                                                                       }>;
+  validateTrialEnrollment(context: __compactRuntime.CircuitContext<PS>,
+                          trialIdHash_0: Uint8Array): __compactRuntime.CircuitResults<PS, boolean>;
   derivePublicKey(context: __compactRuntime.CircuitContext<PS>,
                   privateKey_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   derivePrivateTrialTag(context: __compactRuntime.CircuitContext<PS>,
