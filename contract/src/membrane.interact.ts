@@ -354,7 +354,7 @@ const trialIdBytes = Buffer.from(
 // await isTrialActive(trialIdBytes)
 // await activeTrialDetail(trialIdBytes)
 // await inactiveTrialDetails(trialIdBytes)
-await validateTrialEnrollment(trialIdBytes, hospitalPrivateData)
+// await validateTrialEnrollment(trialIdBytes, hospitalPrivateData)
 
 await walletCtx.wallet.stop()
 process.exit(0)
