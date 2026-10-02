@@ -35,7 +35,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "59b304a3d386622c5f419400119a70710ff728aa35d916ca03ffb56081a2cc64"
+const contractAddress = "da28f2fd3b3a3372c07b8dd67e870987751da21e9f122ad1db146a84514c4103"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -296,6 +296,31 @@ async function activeTrialDetail(trialIdBytes: Uint8Array) {
 }
 
 
+async function inactiveTrialDetails(trialIdBytes: Uint8Array) {
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    // no private data is needed for circuit computation
+  })
+
+  const finalizedTxData = await contract.callTx.inactiveTrialDetail(trialIdBytes)
+
+  const result = finalizedTxData.private.result
+  console.log("===== Inactive trial detail ======")
+
+  console.log("Trial ID Hash:", Buffer.from(result.trialIdHash).toString('hex'))
+  console.log("Disease Code:", result.diseaseCode)
+  console.log("Minimum Age:", result.minAge.toString())
+  console.log("Maximum Age:", result.maxAge.toString())
+  console.log("Minimum Patient Sample Count:", result.minPatientSampleCount.toString())
+  console.log("Status:", result.status.toString())
+  console.log("Enrolled Count:", result.enrolledCount.toString())
+  console.log("Research Lab ID Hash:", Buffer.from(result.researchLabIdHash).toString('hex'))
+  console.log("============================")
+}
+
+
 const trialIdHashHex = "f006cbd0974d319413c265cef619d1ef6257cf7a2872af0e171e04bc8f773cff"
 
 const trialIdBytes = Buffer.from(
@@ -311,6 +336,7 @@ const trialIdBytes = Buffer.from(
 // await trialEnrollment(trialIdBytes, hospitalPrivateData)
 // await isTrialActive(trialIdBytes)
 // await activeTrialDetail(trialIdBytes)
+// await inactiveTrialDetails(trialIdBytes)
 
 await walletCtx.wallet.stop()
 process.exit(0)

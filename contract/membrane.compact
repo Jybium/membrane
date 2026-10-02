@@ -134,7 +134,7 @@ export circuit isTrialActive(trialIdHash: Bytes<32>): Boolean {
 }
 
 
-// todo: add circuit that gets details for an active clinical trial
+// circuit that gets details for an active clinical trial
 export circuit activeTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
   const publicTrialId = disclose(trialIdHash);
   assert(activeTrials.member(publicTrialId), "Trial does not exist or has been cancelled");
@@ -142,7 +142,13 @@ export circuit activeTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
 }
 
 
-// todo: add circuit that gets details for an inactive trial
+// circuit that gets details for an inactive trial
+export circuit inactiveTrialDetail(trialIdHash: Bytes<32>): TrialInfo {
+  const publicTrialId = disclose(trialIdHash);
+  assert(inactiveTrials.member(publicTrialId), "Trial does not exist or has not been cancelled");
+  return inactiveTrials.lookup(publicTrialId);
+}
+
 
 
 // todo: add a circuit that allows the research lab to get hospital enrollments for their specific trial (active/inactive)
