@@ -118,4 +118,34 @@ export class DemoAHospitalDataService implements OnApplicationBootstrap {
       throw new InternalServerErrorException(`Error get patient trial requirement count for demo A hospital`)
     }
   }
+
+
+  async getPatients(pagination: PaginationQueryDto, diseaseCode?: string): Promise<PaginatedResult<DemoAHospitalConsentedPatients>>{
+    try {
+      const { page, limit } = pagination;
+      const skip = (page - 1) * limit;
+
+      const [data, total] = await this.consentedPatientsRepo.findAndCount({
+        skip,
+        take: limit,
+        order: { id: 'DESC' },
+        where: diseaseCode ? { diseaseCode } : {},
+      })
+
+      return {
+        data,
+        meta: {
+          totalItems: total,
+          itemCount: data.length,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+        },
+      }
+
+    } catch (error) {
+      this.logger.error(`Error fetching patients from demo A hospital: ${error.message}`, DemoAHospitalDataService.name)
+      throw new InternalServerErrorException(`Error fetching patients from demo A hospital`)
+    }
+  }
 }
