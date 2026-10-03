@@ -1,11 +1,9 @@
 version: 2.1
 jobs:
-  api_deployment_process:
+  api_build:
     docker:
       - image: cimg/node:26.5.0
-        auth: 
-          username: $DOCKERHUB_USERNAME
-          password: $DOCKERHUB_PASSWORD
+
     steps:
       - checkout
 
@@ -20,17 +18,29 @@ jobs:
             rm -f package-lock.json
             npm install --legacy-peer-deps
       
+
+  api_deploy:
+    docker:
+    - image: cimg/node:26.5.0
+      auth: 
+        username: $DOCKERHUB_USERNAME
+        password: $DOCKERHUB_PASSWORD
+    steps:
       - run:
-          name: Build and push Docker image
+          name: Docker image build-deploy
           command: |
+            cd membrane-api
             docker build -t $DOCKERHUB_USERNAME/membrane_api:latest .
             docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD docker.io
             docker push $DOCKERHUB_USERNAME/membrane_api:latest
 
 
 
+
 workflows:
   membrane_deploy: 
     jobs:
-      - api_deployment_process:
+      - api_build
+      - api_deploy: 
           context: DOCKERHUB_AUTH
+          filters: pipeline.git.branch == "membrane-preview" # run the api_deploy workflow when action is triggered on the preview branch
