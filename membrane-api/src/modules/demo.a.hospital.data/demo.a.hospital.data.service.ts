@@ -1,6 +1,6 @@
-import { Injectable, OnApplicationBootstrap, Inject } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap, Inject, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DemoAHospitalConsentedPatients } from './entities/consented.patients.entity';
 import type { LoggerService } from '@nestjs/common'; 
@@ -99,4 +99,23 @@ export class DemoAHospitalDataService implements OnApplicationBootstrap {
   }
 
   
+
+  // this gets the count of patients from the demo hospital data,
+  // based on the requirement of a clinical trial
+  async getPatientTrialRequirementCount(diseaseCode: string, minAge: number, maxAge: number){
+    try {
+      const patientsCount = await this.consentedPatientsRepo.count({
+        where:{
+          diseaseCode,
+          age: Between(minAge, maxAge)
+        }
+      })
+      return {
+        patientsCount: patientsCount
+      }
+    } catch (error) {
+      this.logger.error(`Error get patient trial requirement count for demo A hospital: ${error.message}`, DemoAHospitalDataService.name)
+      throw new InternalServerErrorException(`Error get patient trial requirement count for demo A hospital`)
+    }
+  }
 }

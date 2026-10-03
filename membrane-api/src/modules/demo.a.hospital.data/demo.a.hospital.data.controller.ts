@@ -1,4 +1,39 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { DemoAHospitalDataService } from './demo.a.hospital.data.service';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 
-@Controller('demo.a.hospital.data')
-export class DemoAHospitalDataController {}
+@Controller('demo-hosp-a-data')
+export class DemoAHospitalDataController {
+  constructor(
+    private readonly demoAHospitalDataService: DemoAHospitalDataService,
+  ) { }
+
+
+  @ApiOperation({ summary: 'Get patient trial requirement count' })
+  @ApiQuery({
+    name: 'icd',
+    type: 'string',
+    description: 'ICD code',
+  })
+  @ApiQuery({
+    name: 'minAge',
+    type: 'number',
+    description: 'Minimum age',
+  })
+  @ApiQuery({
+    name: 'maxAge',
+    type: 'number',
+    description: 'Maximum age',
+  })
+  @Get('patient-ct-requirement-count')
+  async getPatientTrialRequirementCount(
+    @Query('icd') icd: string,
+    @Query('minAge') minAge: number,
+    @Query('maxAge') maxAge: number
+  ) {
+    if (!icd && !minAge && !maxAge) {
+      throw new HttpException({ message: 'No parameters provided' }, HttpStatus.BAD_REQUEST)
+    }
+    return this.demoAHospitalDataService.getPatientTrialRequirementCount(icd, minAge, maxAge)
+  }
+}
