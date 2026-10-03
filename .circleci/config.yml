@@ -25,7 +25,12 @@ jobs:
       auth: 
         username: $DOCKERHUB_USERNAME
         password: $DOCKERHUB_PASSWORD
+    
     steps:
+      - checkout
+      
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
           name: Docker image build-deploy
           command: |
