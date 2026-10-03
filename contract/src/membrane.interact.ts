@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { WebSocket } from 'ws';
 import { Buffer } from 'buffer';
+import axios from 'axios';
 
 
 // Midnight SDK imports
@@ -35,7 +36,7 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "810fe4be7d6e1904fd01e6f1b3ba83535673fc12435bae5e9920a987dbefccc5"
+const contractAddress = "f3f879471a37ae9485f9816289b79dd76329b48620f5b3b03229072a1fe8cc3d"
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -355,6 +356,64 @@ const trialIdBytes = Buffer.from(
 // await activeTrialDetail(trialIdBytes)
 // await inactiveTrialDetails(trialIdBytes)
 // await validateTrialEnrollment(trialIdBytes, hospitalPrivateData)
+
+
+// =================== MEMBRANE CONTRACT CALLS WITH API INDEXING  ==========================
+
+const membraneBaseUrl = "http://localhost:3000/v1/"
+
+
+async function createAndIndexTrial(
+  diseaseCode: string,
+  minAge: number | bigint,
+  maxAge: number | bigint,
+  minPatientSampleCount: number | bigint,
+  privateData: MembranePrivateState
+){
+  const contract = await findDeployedContract(providers, {
+    contractAddress: contractAddress,  
+    compiledContract: compiledContract as any,
+    privateStateId: PRIVATE_STATE_ID,
+    initialPrivateState: privateData, 
+  })
+
+  const finalizedTxData = await contract.callTx.createTrial(
+    diseaseCode,
+    BigInt(minAge),
+    BigInt(maxAge),
+    BigInt(minPatientSampleCount),
+  )
+
+  // converting the circuit result from bytes to a hex string
+  const trialIdHashHex = Buffer.from(finalizedTxData.private.result).toString('hex')
+
+  console.log("Tx Hash:", finalizedTxData.public.txHash)
+  console.log("Created Trial ID (hash):", trialIdHashHex);
+  console.log("Indexing trial...")
+  
+  const trialData = {
+    trialHexId: trialIdHashHex,
+    diseaseCode: diseaseCode
+  }
+
+  const response = await fetch(`${membraneBaseUrl}clinical-trials/index`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(trialData),
+  })
+  
+  const result = await response.json()
+  console.log("Trial indexed:", result)
+}
+
+
+// Membrane contract calls with API call tests
+
+await createAndIndexTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
+
+
 
 await walletCtx.wallet.stop()
 process.exit(0)

@@ -6,6 +6,7 @@ import 'winston-daily-rotate-file'
 import {TypeOrmModule} from '@nestjs/typeorm'
 import {ConfigModule, ConfigService} from '@nestjs/config'
 import { WinstonModule } from 'nest-winston';
+import { ClinicalTrialsModule } from './modules/clinical-trials/clinical-trials.module';
 
 @Module({
   imports: [
@@ -13,13 +14,37 @@ import { WinstonModule } from 'nest-winston';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // WinstonModule.forRoot({
+    //   transports: [
+    //     new winston.transports.Console({
+    //       format: winston.format.combine(
+    //         winston.format.timestamp(),
+    //         winston.format.colorize(),
+    //         winston.format.simple(),
+    //       ),
+    //     }),
+    //   ],
+    // }),
     WinstonModule.forRoot({
       transports: [
         new winston.transports.Console({
           format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.colorize(),
-            winston.format.simple(),
+            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), // timestamp format
+            winston.format.colorize({ all: true }), // colorize level, message, and metadata
+            winston.format.printf(({ timestamp, level, message, context, ...meta }) => {
+              // visual anchor or bracket for the context/module name (defaulting to 'App')
+              const ctx = context ? `[${context}] ` : '[Nest] ';
+              
+              // formatted log string structure
+              let logStr = `${timestamp}  ${level} ${ctx}${message}`;
+
+              // if there's extra metadata or an error stack, append it nicely styled below
+              if (Object.keys(meta).length > 0) {
+                logStr += ` \n${JSON.stringify(meta, null, 2)}`;
+              }
+
+              return logStr;
+            }),
           ),
         }),
       ],
@@ -39,6 +64,7 @@ import { WinstonModule } from 'nest-winston';
     // },
       })
     }),
+    ClinicalTrialsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
