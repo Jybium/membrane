@@ -34,3 +34,38 @@ services:
     environment:
       CFG_PRESET: "dev"
       SIDECHAIN_BLOCK_BENEFICIARY: '04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e'
+
+
+  postgres:
+    image: postgres:15
+    container_name: membrane_api_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: membrane_api_db_pgadmin
+    ports:
+      - "8888:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    restart: always
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+
+
+volumes:
+  pgdata:
+  pgadmin_data:
