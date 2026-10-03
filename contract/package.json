@@ -18,6 +18,7 @@
     "deploy-preview": "npx tsx src/membrane.deploy.preview.ts",
     "membrane-interact": "npx tsx src/membrane.interact.ts",
     "clean": "rm -rf contract/compiled .midnight-state.json .midnight-wallet-state",
+    "setup": "npx tsx src/setup.ts",
 
 
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/membrane.compact ./dist",

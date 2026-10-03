@@ -1,12 +1,18 @@
 {
   "version": 1,
-  "activeNetwork": "undeployed",
-  "wallets": {},
+  "activeNetwork": "preview",
+  "wallets": {
+    "preview": {
+      "seed": "bc9b2a7921f58ec2a5dc3390a3975776a36297612dd4d101560733201bae02b77fc3845ef4a1390c2e7a5673b3a6065685b92912673ccfe441deaff344362e60",
+      "mnemonic": "acquire bulb hockey virus cook erase bus put fortune galaxy used sound cargo canvas elder gather rural december proof notable elephant analyst forward animal",
+      "createdAt": "2026-10-03T00:10:53.735Z"
+    }
+  },
   "deployments": {
-    "undeployed": {
-      "address": "810fe4be7d6e1904fd01e6f1b3ba83535673fc12435bae5e9920a987dbefccc5",
-      "deployer": "mn_addr_undeployed1h3ssm5ru2t6eqy4g3she78zlxn96e36ms6pq996aduvmateh9p9sk96u7s",
-      "deployedAt": "2026-10-02T23:36:11.192Z"
+    "preview": {
+      "address": "e03c6abcd309f053d96913999e6ea2ba5ce3b15386860f039e2c9e65e69d03e3",
+      "deployer": "mn_addr_preview1w9sh6zcmzx3kaceed9w9qucyt7p87cms2aecfn0kg3g2nce47x6q832e5w",
+      "deployedAt": "2026-10-03T00:35:24.574Z"
     }
   }
 }
