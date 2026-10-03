@@ -7,6 +7,7 @@ import {TypeOrmModule} from '@nestjs/typeorm'
 import {ConfigModule, ConfigService} from '@nestjs/config'
 import { WinstonModule } from 'nest-winston';
 import { ClinicalTrialsModule } from './modules/clinical-trials/clinical-trials.module';
+import { DemoAHospitalDataModule } from './modules/demo.a.hospital.data/demo.a.hospital.data.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { ClinicalTrialsModule } from './modules/clinical-trials/clinical-trials.
       })
     }),
     ClinicalTrialsModule,
+    DemoAHospitalDataModule,
   ],
   controllers: [AppController],
   providers: [AppService],
