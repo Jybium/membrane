@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   connectWallet as connectMidnightWallet,
+  silentReconnectWallet,
   isWalletInstalled,
   type WalletSession,
 } from '../midnight/wallet';
@@ -22,25 +23,14 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const WALLET_STORAGE_KEY = 'membrane_wallet_session';
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [walletSession, setWalletSession] = useState<WalletSession | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = localStorage.getItem(WALLET_STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored) as WalletSession;
-      }
-    } catch (e) {
-      console.warn('Could not restore wallet session:', e);
-    }
-    return null;
-  });
+  // Strict Web3 Security: In-Memory only, 0 data written to disk or localStorage
+  const [walletSession, setWalletSession] = useState<WalletSession | null>(null);
   const [dynamicCodes, setDynamicCodes] = useState<DynamicIcdOption[]>([]);
   const [totalCohortCount, setTotalCohortCount] = useState<number>(200);
   const [loadingCodes, setLoadingCodes] = useState<boolean>(true);
 
+  // Load dynamic clinical registry data & hospital statistics
   useEffect(() => {
     let mounted = true;
     void fetchDynamicHospitalCodes()
@@ -58,27 +48,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Strict Web3 Security & Silent Extension Reconnect:
+  // 1. Purge any legacy disk-stored session to guarantee 0 data on disk
+  // 2. Perform silent extension reconnection via Midnight Lace if already authorized
+  useEffect(() => {
+    let mounted = true;
+
+    // Purge any legacy disk data
+    try {
+      localStorage.removeItem('membrane_wallet_session');
+    } catch {
+      // ignore
+    }
+
+    const checkSilentReconnect = async () => {
+      const session = await silentReconnectWallet();
+      if (mounted && session) {
+        setWalletSession(session);
+      }
+    };
+
+    void checkSilentReconnect();
+
+    // Browser extensions sometimes inject window.midnight 100-250ms after initial script execution
+    const retryTimer = window.setTimeout(() => {
+      if (mounted && !walletSession) {
+        void checkSilentReconnect();
+      }
+    }, 250);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(retryTimer);
+    };
+  }, []);
+
+  // User-initiated wallet connect (modal/Lace prompt)
   const connectWallet = useCallback(async () => {
     try {
       const session = await connectMidnightWallet();
+      // Keep strictly in React memory — zero disk persistence
       setWalletSession(session);
-      try {
-        localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(session));
-      } catch (storageErr) {
-        console.warn('Failed to persist wallet session:', storageErr);
-      }
     } catch (err) {
       console.warn('Wallet connection note:', err);
     }
   }, []);
 
+  // Instant in-memory purge upon disconnect
   const disconnectWallet = useCallback(() => {
     setWalletSession(null);
-    try {
-      localStorage.removeItem(WALLET_STORAGE_KEY);
-    } catch (storageErr) {
-      console.warn('Failed to clear stored wallet session:', storageErr);
-    }
   }, []);
 
   const toggleWallet = useCallback(async () => {
