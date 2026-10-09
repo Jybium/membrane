@@ -6,15 +6,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node ../node_modules/vite/bin/vite.js build --mode preprod",
-    "build:preview": "node ../node_modules/vite/bin/vite.js build --mode preview",
+    "build": "vite build --mode preprod",
+    "build:preview": "vite build --mode preview",
     "build:start": "npm run build && npm run start",
     "build:start:preview": "npm run build:preview && npm run start",
     "ci": "npm run typecheck && npm run lint",
-    "dev": "node ../node_modules/vite/bin/vite.js",
+    "dev": "vite",
     "lint": "eslint ./src",
     "start": "http-server --port 0 ./dist",
-    "typecheck": "node ../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -33,6 +33,8 @@
     "@types/react-dom": "19.2.4",
     "@vitejs/plugin-react": "^6.0.2",
     "eslint-plugin-react": "^7.37.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.14",
     "vite-plugin-node-polyfills": "^0.28.0"
   }
 }
