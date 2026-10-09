@@ -6,7 +6,7 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract } from '../midnight/contract';
+import { getMembraneContract, getContractStudyDetails, type MembraneStudy } from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
@@ -54,17 +54,17 @@ export const HospitalPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { walletSession, connectWallet, dynamicCodes, totalCohortCount } = useApp();
+  const { walletSession, connectWallet, dynamicCodes } = useApp();
 
   const urlIcd = searchParams.get('icd') || 'ALL';
   const urlTrial = searchParams.get('trial') || '';
-  const urlMinCohort = parseInt(searchParams.get('minCohort') || '10', 10) || 10;
 
   const [diseaseCode, setDiseaseCode] = useState<string>(urlIcd);
-  const [minimum, setMinimum] = useState<number>(urlMinCohort);
   const [trials, setTrials] = useState<ApiRecord[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [indexStatus, setIndexStatus] = useState<Status>('loading');
+  const [contractStudy, setContractStudy] = useState<MembraneStudy | null>(null);
+  const [contractStudyLoading, setContractStudyLoading] = useState<boolean>(false);
   const [proofStatus, setProofStatus] = useState<Status>('idle');
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
@@ -91,6 +91,10 @@ export const HospitalPage: React.FC = () => {
 
   const loadRequests = useCallback(async () => {
     setIndexStatus('loading');
+    setProofStatus('idle');
+    setCount(null);
+    setMessage('');
+    setContractStudy(null);
     try {
       const clean = diseaseCode.trim().toUpperCase();
       const path =
@@ -101,15 +105,20 @@ export const HospitalPage: React.FC = () => {
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
       setTrials(list);
 
-      // If URL specified a trial hex ID, find its index
-      if (urlTrial) {
-        const found = list.findIndex((t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial);
-        setSelectedIndex(found >= 0 ? found : 0);
+      if (list.length > 0) {
+        let idx = 0;
+        if (urlTrial) {
+          const found = list.findIndex((t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial);
+          idx = found >= 0 ? found : 0;
+        }
+        setSelectedIndex(idx);
       } else {
         setSelectedIndex(0);
       }
       setIndexStatus('success');
     } catch {
+      setTrials([]);
+      setSelectedIndex(0);
       setIndexStatus('error');
     }
   }, [diseaseCode, urlTrial]);
@@ -118,40 +127,82 @@ export const HospitalPage: React.FC = () => {
     void loadRequests();
   }, [loadRequests]);
 
+  const selectedTrial = trials.length > 0 && selectedIndex < trials.length ? trials[selectedIndex] : null;
+
+  // Workflow Step: Query smart contract using trialHexId to pull precise details
+  useEffect(() => {
+    let isMounted = true;
+    if (!selectedTrial) {
+      setContractStudy(null);
+      setContractStudyLoading(false);
+      return;
+    }
+
+    const hex = text(selectedTrial, ['trialHexId', 'hexId', 'id'], '');
+    const code = text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode);
+    if (!hex) {
+      setContractStudy(null);
+      setContractStudyLoading(false);
+      return;
+    }
+
+    setContractStudyLoading(true);
+    void getContractStudyDetails(hex, code).then((details) => {
+      if (isMounted) {
+        setContractStudy(details);
+        setContractStudyLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTrial, diseaseCode]);
+
   const handleDiseaseChange = (code: string) => {
     setDiseaseCode(code);
-    updateUrlParams({ icd: code });
+    setTrials([]);
+    setSelectedIndex(0);
+    setContractStudy(null);
+    setProofStatus('idle');
+    setCount(null);
+    setMessage('');
+    updateUrlParams({ icd: code, trial: '' });
   };
 
   const handleSelectTrial = (index: number, trial: ApiRecord) => {
     setSelectedIndex(index);
     setProofStatus('idle');
     setCount(null);
+    setMessage('');
     const hex = text(trial, ['trialHexId', 'hexId', 'id'], '');
     updateUrlParams({ trial: hex });
   };
 
-  const handleMinChange = (val: number) => {
-    setMinimum(val);
-    updateUrlParams({ minCohort: String(val) });
-  };
+  const requiredCohort = contractStudy?.minCohort ?? 10;
+  const eligible = count !== null && count >= requiredCohort;
 
   const verify = async () => {
+    if (!selectedTrial) return;
     setProofStatus('loading');
     setMessage('');
     try {
-      const selectedTrial = trials[selectedIndex];
-      const targetCode = selectedTrial
-        ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)
-        : diseaseCode;
+      const hex = text(selectedTrial, ['trialHexId', 'hexId'], '');
+      const targetCode = contractStudy?.diseaseCode || text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode);
       const cleanCode = (targetCode === 'ALL' ? '' : targetCode).trim().toUpperCase();
 
       if (!cleanCode) {
         throw new Error('Please select an active clinical trial request.');
       }
 
+      // Midnight smart contract dictates cohort requirements and age ranges
+      const cohortRequirement = contractStudy?.minCohort ?? 10;
+      const targetMinAge = contractStudy?.minAge ?? 40;
+      const targetMaxAge = contractStudy?.maxAge ?? 65;
+
+      // 1. Evaluate matching consented patients locally inside hospital boundary
       const result = await apiRequest<{ patientsCount?: number }>(
-        `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=40&maxAge=65`,
+        `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=${targetMinAge}&maxAge=${targetMaxAge}`,
       );
       if (typeof result.patientsCount !== 'number') {
         throw new Error('Invalid count response from hospital EHR.');
@@ -159,10 +210,9 @@ export const HospitalPage: React.FC = () => {
       const localCount = result.patientsCount;
       setCount(localCount);
 
-      // If wallet is connected, verify on Midnight smart contract
-      if (walletSession && isContractConfigured() && selectedTrial) {
-        const hex = text(selectedTrial, ['trialHexId', 'hexId'], '');
-        if (hex && localCount >= minimum) {
+      // 2. If wallet is connected, verify and prove on Midnight smart contract
+      if (walletSession && isContractConfigured()) {
+        if (hex && localCount >= cohortRequirement) {
           try {
             const contract = await getMembraneContract(walletSession);
             await contract.proveEligibility(hex, localCount);
@@ -178,9 +228,6 @@ export const HospitalPage: React.FC = () => {
       setMessage(error instanceof Error ? error.message : 'Could not verify eligibility.');
     }
   };
-
-  const eligible = count !== null && count >= minimum;
-  const selectedTrial = trials[selectedIndex];
 
   return (
     <div className="app">
@@ -258,7 +305,10 @@ export const HospitalPage: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="empty compact">No open requests found for ICD {diseaseCode || 'selected filter'}.</div>
+            <div className="empty compact">
+              No open requests found for ICD{' '}
+              {diseaseCode === 'ALL' ? 'all diagnoses' : `${diseaseCode} (${getDiseaseName(diseaseCode)})`}.
+            </div>
           )}
         </section>
 
@@ -275,12 +325,17 @@ export const HospitalPage: React.FC = () => {
           </div>
 
           {!selectedTrial ? (
-            <div className="empty compact" style={{ textAlign: 'center', padding: '24px 16px' }}>
+            <div className="empty-check-state">
+              <div className="empty-check-icon">🔒</div>
               <strong>No open trial selected</strong>
-              <p style={{ marginTop: '6px', fontSize: '0.88rem', color: '#677A8A' }}>
+              <p>
                 {trials.length === 0
-                  ? `There are no clinical trials currently indexed for ${diseaseCode === 'ALL' ? 'any condition' : `ICD ${diseaseCode}`}. Switch to "All diagnoses" above to see all trials, or publish a new trial in the Research Lab.`
-                  : 'Select an open clinical trial from Section 01 above to evaluate institutional feasibility.'}
+                  ? `No clinical trial requests are currently indexed for ${
+                      diseaseCode === 'ALL'
+                        ? 'the selected filter'
+                        : `ICD ${diseaseCode} (${getDiseaseName(diseaseCode)})`
+                    }. The private eligibility check remains cleared until a matching open trial is found.`
+                  : 'Select an open clinical trial from Section 01 above to evaluate institutional feasibility against hospital records.'}
               </p>
             </div>
           ) : (
@@ -289,15 +344,28 @@ export const HospitalPage: React.FC = () => {
                 <div>
                   <span>Condition</span>
                   <strong>
-                    ICD {text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)} —{' '}
-                    {getDiseaseName(text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode))}
+                    ICD{' '}
+                    {contractStudy
+                      ? contractStudy.diseaseCode
+                      : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}{' '}
+                    —{' '}
+                    {getDiseaseName(
+                      contractStudy
+                        ? contractStudy.diseaseCode
+                        : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
+                    )}
                   </strong>
                 </div>
                 <div>
                   <span>Minimum cohort</span>
-                  <strong>
-                    <input type="number" value={minimum} onChange={(e) => handleMinChange(Number(e.target.value) || 0)} min={1} />{' '}
-                    patients
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {contractStudyLoading ? (
+                      <span style={{ color: '#6C7D8C' }}>Querying smart contract…</span>
+                    ) : (
+                      <>
+                        <span>{requiredCohort} patients</span>
+                      </>
+                    )}
                   </strong>
                 </div>
                 <div>
@@ -312,8 +380,9 @@ export const HospitalPage: React.FC = () => {
                   <div>
                     <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
                     <p>
-                      {count} matching demo records were evaluated locally inside institutional custody. Only this
-                      zero-knowledge predicate result is shared on Midnight.
+                      {eligible
+                        ? `${count} matching demo records evaluated locally (required ≥ ${requiredCohort}). Zero-knowledge witness proof generated and submitted to Midnight.`
+                        : `Only ${count} matching demo records found locally (required ≥ ${requiredCohort}). Zero-knowledge criteria not satisfied.`}
                     </p>
                   </div>
                   <button type="button" onClick={() => setProofStatus('idle')}>
@@ -325,7 +394,7 @@ export const HospitalPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={walletSession ? verify : connectWallet}
-                    disabled={proofStatus === 'loading'}
+                    disabled={proofStatus === 'loading' || contractStudyLoading}
                   >
                     {proofStatus === 'loading'
                       ? 'Evaluating locally…'

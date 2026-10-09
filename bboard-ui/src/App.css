@@ -1006,6 +1006,52 @@ input:focus {
   margin-right: 3px;
 }
 
+.contract-locked-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 7.5px;
+  font-weight: 600;
+  color: #4E93B4;
+  background: rgba(78, 147, 180, 0.12);
+  border: 1px solid rgba(78, 147, 180, 0.25);
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.empty-check-state {
+  text-align: center;
+  padding: 32px 18px;
+  background: rgba(246, 243, 236, 0.4);
+  border: 1px dashed #DFD9CD;
+  border-radius: 8px;
+  margin: 6px 0;
+}
+
+.empty-check-state .empty-check-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+  opacity: 0.85;
+}
+
+.empty-check-state strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1A2A39;
+  margin-bottom: 4px;
+}
+
+.empty-check-state p {
+  margin: 0 auto;
+  max-width: 440px;
+  font-size: 9px;
+  color: #6C7D8C;
+  line-height: 1.5;
+}
+
 .result {
   margin-top: 18px;
   padding: 15px;
