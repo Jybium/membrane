@@ -179,7 +179,7 @@ export const HospitalPage: React.FC = () => {
     updateUrlParams({ trial: hex });
   };
 
-  const requiredCohort = contractStudy?.minCohort ?? 10;
+  const requiredCohort = contractStudy?.minCohort ?? 0;
   const eligible = count !== null && count >= requiredCohort;
 
   const verify = async () => {
@@ -215,7 +215,8 @@ export const HospitalPage: React.FC = () => {
         if (hex && localCount >= cohortRequirement) {
           try {
             const contract = await getMembraneContract(walletSession);
-            await contract.proveEligibility(hex, localCount);
+            // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
+            await contract.trialEnrollment(hex, localCount);
           } catch (contractErr) {
             console.warn('Smart contract proof submission note:', contractErr);
           }

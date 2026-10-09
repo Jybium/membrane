@@ -151,28 +151,35 @@ export const ResearchLabPage: React.FC = () => {
     setStatus('loading');
     setMessage('');
 
-    // Generate 20 random bytes for trial identifier
-    const bytes = crypto.getRandomValues(new Uint8Array(20));
-    const hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    let hexId = '';
 
     try {
-      // 1. If Midnight wallet is connected, publish study criteria to Midnight smart contract
+      const minCohortNum = Math.max(1, parseInt(minimum, 10) || 10);
+      const minAgeNum = Math.max(0, parseInt(minAge, 10) || 40);
+      const maxAgeNum = Math.max(0, parseInt(maxAge, 10) || 65);
+
+      // 1. If Midnight wallet is connected, invoke createTrial circuit defined in membrane.compact
       if (walletSession && isContractConfigured()) {
         try {
           const contract = await getMembraneContract(walletSession);
-          const criteria: StudyCriteria = {
+          const result = await contract.createTrial(
             diseaseCode,
-            minCohort: Math.max(1, parseInt(minimum, 10) || 10),
-            minAge: Math.max(0, parseInt(minAge, 10) || 40),
-            maxAge: Math.max(0, parseInt(maxAge, 10) || 65),
-          };
-          await contract.createStudy(hexId, criteria);
+            minAgeNum,
+            maxAgeNum,
+            minCohortNum,
+          );
+          hexId = result.trialHexId;
         } catch (contractErr) {
           console.warn('Smart contract publish fallback:', contractErr);
         }
       }
 
-      // 2. CRITICAL USER REQUIREMENT: Index the trial on the API DB
+      if (!hexId) {
+        const bytes = crypto.getRandomValues(new Uint8Array(20));
+        hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      // 2. Index the created on-chain trial in the auxiliary API DB
       await apiRequest('/clinical-trials/index', {
         method: 'POST',
         body: JSON.stringify({
