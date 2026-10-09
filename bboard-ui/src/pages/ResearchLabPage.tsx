@@ -74,6 +74,8 @@ export const ResearchLabPage: React.FC = () => {
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string>('');
   const [trials, setTrials] = useState<ApiRecord[]>([]);
+  const [trialStatuses, setTrialStatuses] = useState<Record<string, boolean>>({});
+  const [deactivatingHex, setDeactivatingHex] = useState<string | null>(null);
 
   // Keep state synchronized with URL query params
   const updateUrlParams = useCallback(
@@ -96,6 +98,23 @@ export const ResearchLabPage: React.FC = () => {
     [setSearchParams],
   );
 
+  const fetchTrialStatuses = useCallback(async (list: ApiRecord[]) => {
+    if (list.length === 0) return;
+    try {
+      const contract = await getMembraneContract(walletSession);
+      const statuses: Record<string, boolean> = {};
+      for (const t of list) {
+        const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
+        if (hex) {
+          statuses[hex] = await contract.isTrialActive(hex);
+        }
+      }
+      setTrialStatuses(statuses);
+    } catch {
+      // ignore
+    }
+  }, [walletSession]);
+
   const loadTrials = useCallback(async () => {
     setStatus('loading');
     setMessage('');
@@ -106,15 +125,34 @@ export const ResearchLabPage: React.FC = () => {
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
       setTrials(list);
       setStatus('success');
+      void fetchTrialStatuses(list);
     } catch (error) {
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'Could not load requests.');
     }
-  }, [diseaseCode]);
+  }, [diseaseCode, fetchTrialStatuses]);
 
   useEffect(() => {
     void loadTrials();
   }, [loadTrials]);
+
+  const handleDeactivateTrial = async (hex: string) => {
+    if (!hex) return;
+    setDeactivatingHex(hex);
+    setMessage('');
+    try {
+      const contract = await getMembraneContract(walletSession);
+      await contract.cancelTrial(hex);
+      setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
+      setMessage(`Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`);
+      setStatus('success');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not deactivate trial.');
+      setStatus('error');
+    } finally {
+      setDeactivatingHex(null);
+    }
+  };
 
   const handleDiseaseChange = (code: string) => {
     setDiseaseCode(code);
@@ -321,16 +359,41 @@ export const ResearchLabPage: React.FC = () => {
               {trials.map((trial, index) => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
                 const code = text(trial, ['diseaseCode', 'icd'], diseaseCode);
+                const isActive = trialStatuses[hex] !== false;
+                const isDeactivating = deactivatingHex === hex;
+
                 return (
-                  <div className="row" key={hex || index}>
+                  <div
+                    className="row"
+                    key={hex || index}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+                  >
                     <span className="row-icon">CT</span>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                       <small>
                         Trial ID: {hex.slice(0, 16)}… • ICD {code}
                       </small>
                     </div>
-                    <b>Indexed</b>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <span className={`status-pill ${isActive ? 'active' : 'inactive'}`}>
+                        <span className="status-dot" />
+                        {isActive ? 'Active' : 'Closed'}
+                      </span>
+                      {isActive ? (
+                        <button
+                          type="button"
+                          className="deactivate-btn"
+                          disabled={isDeactivating}
+                          onClick={() => handleDeactivateTrial(hex)}
+                          title="Deactivate / Cancel this trial on Midnight smart contract"
+                        >
+                          {isDeactivating ? 'Deactivating…' : 'Cancel Trial'}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Recruitment closed</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

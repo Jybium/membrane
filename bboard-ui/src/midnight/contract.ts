@@ -178,6 +178,13 @@ export async function getContractStudyDetails(
   fallbackDiseaseCode?: string,
 ): Promise<MembraneStudy> {
   await Promise.resolve();
+  const inactive = getInactiveTrialsStore();
+  for (const [key, val] of Object.entries(inactive)) {
+    if (key === trialHexId || key.startsWith(trialHexId) || trialHexId.startsWith(key)) {
+      return toMembraneStudy({ ...val, status: TrialStatusEnum.inactive });
+    }
+  }
+
   const active = getActiveTrialsStore();
   for (const [key, val] of Object.entries(active)) {
     if (key === trialHexId || key.startsWith(trialHexId) || trialHexId.startsWith(key)) {
@@ -417,6 +424,12 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
      * circuit isTrialActive(trialIdHash: Bytes<32>): Boolean
      */
     async isTrialActive(trialHexId: string): Promise<boolean> {
+      const inactive = getInactiveTrialsStore();
+      for (const k of Object.keys(inactive)) {
+        if (k === trialHexId || k.startsWith(trialHexId) || trialHexId.startsWith(k)) {
+          return false;
+        }
+      }
       const active = getActiveTrialsStore();
       for (const k of Object.keys(active)) {
         if (k === trialHexId || k.startsWith(trialHexId) || trialHexId.startsWith(k)) {

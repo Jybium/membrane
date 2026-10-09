@@ -6,8 +6,20 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract, getContractStudyDetails, type MembraneStudy } from '../midnight/contract';
+import {
+  getMembraneContract,
+  getContractStudyDetails,
+  type MembraneStudy,
+  TrialStatusEnum,
+} from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
+import {
+  initProofServerAutoDetection,
+  subscribeProofServer,
+  checkProofServer,
+  setSimulatedProver,
+  type ProofServerState,
+} from '../midnight/proofServer';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -61,6 +73,7 @@ export const HospitalPage: React.FC = () => {
 
   const [diseaseCode, setDiseaseCode] = useState<string>(urlIcd);
   const [trials, setTrials] = useState<ApiRecord[]>([]);
+  const [trialStatuses, setTrialStatuses] = useState<Record<string, boolean>>({});
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [indexStatus, setIndexStatus] = useState<Status>('loading');
   const [contractStudy, setContractStudy] = useState<MembraneStudy | null>(null);
@@ -68,6 +81,25 @@ export const HospitalPage: React.FC = () => {
   const [proofStatus, setProofStatus] = useState<Status>('idle');
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
+
+  const [proofServer, setProofServer] = useState<ProofServerState>({
+    status: 'checking',
+    uri: 'http://localhost:6300',
+    isSimulated: false,
+    lastChecked: null,
+  });
+
+  // Real-time automatic detection and subscription for local proof server
+  useEffect(() => {
+    const stopAuto = initProofServerAutoDetection(12000);
+    const unsub = subscribeProofServer((state) => {
+      setProofServer(state);
+    });
+    return () => {
+      stopAuto();
+      unsub();
+    };
+  }, []);
 
   const updateUrlParams = useCallback(
     (updates: Record<string, string>) => {
@@ -87,6 +119,26 @@ export const HospitalPage: React.FC = () => {
       );
     },
     [setSearchParams],
+  );
+
+  const fetchTrialStatuses = useCallback(
+    async (list: ApiRecord[]) => {
+      if (list.length === 0) return;
+      try {
+        const contract = await getMembraneContract(walletSession);
+        const statuses: Record<string, boolean> = {};
+        for (const t of list) {
+          const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
+          if (hex) {
+            statuses[hex] = await contract.isTrialActive(hex);
+          }
+        }
+        setTrialStatuses(statuses);
+      } catch {
+        // ignore
+      }
+    },
+    [walletSession],
   );
 
   const loadRequests = useCallback(async () => {
@@ -116,12 +168,13 @@ export const HospitalPage: React.FC = () => {
         setSelectedIndex(0);
       }
       setIndexStatus('success');
+      void fetchTrialStatuses(list);
     } catch {
       setTrials([]);
       setSelectedIndex(0);
       setIndexStatus('error');
     }
-  }, [diseaseCode, urlTrial]);
+  }, [diseaseCode, urlTrial, fetchTrialStatuses]);
 
   useEffect(() => {
     void loadRequests();
@@ -182,8 +235,33 @@ export const HospitalPage: React.FC = () => {
   const requiredCohort = contractStudy?.minCohort ?? 0;
   const eligible = count !== null && count >= requiredCohort;
 
+  const selectedHex = selectedTrial ? text(selectedTrial, ['trialHexId', 'hexId', 'id'], '') : '';
+  const isSelectedTrialActive =
+    contractStudy?.status === TrialStatusEnum.inactive
+      ? false
+      : selectedHex
+        ? trialStatuses[selectedHex] !== false
+        : true;
+
   const verify = async () => {
     if (!selectedTrial) return;
+
+    // Requirement 2: Hospital can only enroll in an active trial
+    if (!isSelectedTrialActive) {
+      setProofStatus('error');
+      setMessage('This clinical trial is inactive or has been cancelled by the research lab. Enrollment is disabled.');
+      return;
+    }
+
+    // Requirement 3: Check to see if local proof server is running or active
+    if (proofServer.status !== 'online') {
+      setProofStatus('error');
+      setMessage(
+        `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute zero-knowledge proofs locally.`,
+      );
+      return;
+    }
+
     setProofStatus('loading');
     setMessage('');
     try {
@@ -286,6 +364,8 @@ export const HospitalPage: React.FC = () => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
                 const code = text(trial, ['diseaseCode', 'icd'], diseaseCode || 'K30');
                 const isSelected = selectedIndex === index;
+                const isActive = trialStatuses[hex] !== false;
+
                 return (
                   <button
                     type="button"
@@ -294,12 +374,16 @@ export const HospitalPage: React.FC = () => {
                     onClick={() => handleSelectTrial(index, trial)}
                   >
                     <span className="row-icon">CT</span>
-                    <div>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
                       <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                       <small>
                         Trial ID: {hex.slice(0, 16)}… • ICD {code}
                       </small>
                     </div>
+                    <span className={`status-pill ${isActive ? 'active' : 'inactive'}`} style={{ marginRight: '8px' }}>
+                      <span className="status-dot" />
+                      {isActive ? 'Active' : 'Closed'}
+                    </span>
                     <span>{isSelected ? 'Selected' : 'Select'}</span>
                   </button>
                 );
@@ -323,6 +407,41 @@ export const HospitalPage: React.FC = () => {
               </div>
             </div>
             <b className="private">Local ZK Enclave</b>
+          </div>
+
+          {/* Proof Server Real-time Detection Banner */}
+          <div className={`proof-server-banner ${proofServer.status}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span className="beacon-dot" />
+              <div>
+                <strong>Local Proof Server: </strong>
+                <small>{proofServer.message || proofServer.uri}</small>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void checkProofServer()}
+                style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+              >
+                Recheck
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setSimulatedProver(!proofServer.isSimulated)}
+                title="Toggle simulated enclave if Docker proof server is not running locally"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 8px',
+                  color: proofServer.isSimulated ? '#10b981' : '#64748b',
+                  fontWeight: proofServer.isSimulated ? 600 : 400,
+                }}
+              >
+                {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
+              </button>
+            </div>
           </div>
 
           {!selectedTrial ? (
@@ -370,6 +489,15 @@ export const HospitalPage: React.FC = () => {
                   </strong>
                 </div>
                 <div>
+                  <span>Trial status</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className={`status-pill ${isSelectedTrialActive ? 'active' : 'inactive'}`}>
+                      <span className="status-dot" />
+                      {isSelectedTrialActive ? 'Active for Recruitment' : 'Closed / Deactivated'}
+                    </span>
+                  </strong>
+                </div>
+                <div>
                   <span>Patient records</span>
                   <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
                 </div>
@@ -382,7 +510,7 @@ export const HospitalPage: React.FC = () => {
                     <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
                     <p>
                       {eligible
-                        ? `${count} matching demo records evaluated locally (required ≥ ${requiredCohort}). Zero-knowledge witness proof generated and submitted to Midnight.`
+                        ? `${count} matching demo records evaluated locally (required ≥ ${requiredCohort}). Zero-knowledge witness proof generated on local proof server and submitted to Midnight.`
                         : `Only ${count} matching demo records found locally (required ≥ ${requiredCohort}). Zero-knowledge criteria not satisfied.`}
                     </p>
                   </div>
@@ -395,13 +523,29 @@ export const HospitalPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={walletSession ? verify : connectWallet}
-                    disabled={proofStatus === 'loading' || contractStudyLoading}
+                    disabled={
+                      proofStatus === 'loading' ||
+                      contractStudyLoading ||
+                      !isSelectedTrialActive ||
+                      proofServer.status === 'checking'
+                    }
+                    title={
+                      !isSelectedTrialActive
+                        ? 'Cannot enroll in an inactive trial'
+                        : proofServer.status === 'offline'
+                          ? 'Local proof server is offline'
+                          : undefined
+                    }
                   >
                     {proofStatus === 'loading'
-                      ? 'Evaluating locally…'
-                      : walletSession
-                        ? 'Verify eligibility & prove'
-                        : 'Connect wallet to verify'}
+                      ? 'Generating local ZK proof…'
+                      : !isSelectedTrialActive
+                        ? 'Trial Inactive (Recruitment Closed)'
+                        : walletSession
+                          ? proofServer.status === 'offline'
+                            ? 'Proof Server Offline — Cannot Enroll'
+                            : 'Verify eligibility & prove'
+                          : 'Connect wallet to verify'}
                     <Arrow />
                   </button>
                 </div>
