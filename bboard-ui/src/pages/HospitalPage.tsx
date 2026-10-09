@@ -4,6 +4,7 @@ import { AppHeader, Arrow } from '../components/AppHeader';
 import { DynamicIcdSelect } from '../components/DynamicIcdSelect';
 import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
+import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 import { getMembraneContract } from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
@@ -46,6 +47,12 @@ function text(record: ApiRecord, keys: string[], fallback: string): string {
 }
 
 export const HospitalPage: React.FC = () => {
+  usePageSeo({
+    title: 'Hospital Cohort — Private Witness Proof Generation | Membrane',
+    description:
+      'Evaluate local hospital patient cohorts against trial criteria using air-gapped zero-knowledge witness proofs.',
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession, connectWallet, dynamicCodes, totalCohortCount } = useApp();
 

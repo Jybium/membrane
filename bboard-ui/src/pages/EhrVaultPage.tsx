@@ -4,6 +4,7 @@ import { AppHeader } from '../components/AppHeader';
 import { DynamicIcdSelect } from '../components/DynamicIcdSelect';
 import { TableSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
+import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
@@ -44,6 +45,12 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const EhrVaultPage: React.FC = () => {
+  usePageSeo({
+    title: 'Consented EHR Vault — Local Air-Gapped Health Records | Membrane',
+    description:
+      'Manage consented patient electronic health records stored locally on-premise for zero-knowledge trial matching.',
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const { dynamicCodes, totalCohortCount } = useApp();
 

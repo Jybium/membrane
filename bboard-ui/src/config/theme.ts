@@ -161,7 +161,7 @@ export const theme = createTheme({
           borderRadius: 14,
           backgroundColor: '#1A2A39',
           border: '1px solid #2B4257',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4) !important',
+          boxShadow: 'none !important',
         },
       },
     },

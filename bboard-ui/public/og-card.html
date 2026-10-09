@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Membrane OG Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: #1A2A39;
+      font-family: 'DM Sans', sans-serif;
+      color: #F6F3EC;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .og-container {
+      position: relative;
+      width: 1200px;
+      height: 630px;
+      padding: 56px 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        radial-gradient(ellipse 650px 450px at 85% 20%, rgba(78, 147, 180, 0.22), transparent 70%),
+        radial-gradient(circle 350px at 15% 90%, rgba(78, 147, 180, 0.12), transparent 60%),
+        linear-gradient(135deg, #1A2A39 0%, #13202C 50%, #0E1720 100%);
+    }
+
+    /* Subtle grid overlay */
+    .grid-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(246, 243, 236, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246, 243, 236, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* Header row */
+    .og-header {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      object-fit: contain;
+    }
+
+    .brand-title {
+      font-family: 'Manrope', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #F6F3EC;
+    }
+
+    .powered-badge {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: rgba(78, 147, 180, 0.12);
+      border: 1px solid rgba(78, 147, 180, 0.35);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: #87C2DE;
+      text-transform: uppercase;
+    }
+
+    .powered-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4E93B4;
+    }
+
+    /* Main body row */
+    .og-content {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center;
+      gap: 48px;
+    }
+
+    .category-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: rgba(78, 147, 180, 0.18);
+      border: 1px solid rgba(78, 147, 180, 0.3);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: #87C2DE;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: 'Manrope', sans-serif;
+      font-size: 50px;
+      line-height: 1.08;
+      font-weight: 800;
+      letter-spacing: -1.8px;
+      color: #F6F3EC;
+      margin-bottom: 18px;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: #4E93B4;
+    }
+
+    .desc {
+      font-size: 18px;
+      line-height: 1.5;
+      color: #A5B6C5;
+      max-width: 540px;
+    }
+
+    /* Proof card preview on the right */
+    .preview-card {
+      background: rgba(26, 42, 57, 0.7);
+      border: 1px solid rgba(78, 147, 180, 0.35);
+      border-radius: 20px;
+      padding: 26px;
+      backdrop-filter: blur(16px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 18px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8CA0B2;
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4E93B4;
+    }
+
+    .card-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4E93B4;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .stat-number {
+      font-family: 'Manrope', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      color: #F6F3EC;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: #8CA0B2;
+      font-weight: 600;
+    }
+
+    .circuit-box {
+      background: rgba(14, 23, 32, 0.7);
+      border: 1px solid rgba(78, 147, 180, 0.2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .circuit-box code {
+      color: #87C2DE;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .circuit-box span {
+      color: #6C7D8C;
+      font-size: 11px;
+    }
+
+    /* Footer badges row */
+    .og-footer {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(246, 243, 236, 0.08);
+    }
+
+    .footer-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #8CA0B2;
+    }
+
+    .footer-pill svg {
+      width: 16px;
+      height: 16px;
+      color: #4E93B4;
+    }
+
+    .footer-url {
+      margin-left: auto;
+      font-family: 'Manrope', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #87C2DE;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="og-container">
+    <div class="grid-pattern"></div>
+
+    <!-- Header -->
+    <header class="og-header">
+      <div class="brand-wrap">
+        <img src="/membrane-logo.png" alt="Membrane" class="brand-logo-img">
+        <span class="brand-title">Membrane</span>
+      </div>
+      <div class="powered-badge">
+        <span class="powered-dot"></span>
+        Midnight Network
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="og-content">
+      <div class="og-copy">
+        <div class="category-tag">Zero-Knowledge Clinical Protocol</div>
+        <h1>Find the right cohort.<br><em>Reveal zero patient data.</em></h1>
+        <p class="desc">
+          Privacy-preserving clinical research and hospital patient recruitment powered by zero-knowledge proofs on the Midnight Network.
+        </p>
+      </div>
+
+      <!-- Live card visual -->
+      <div class="preview-card">
+        <div class="card-top">
+          <span class="card-label">ZK Verification Proof</span>
+          <div class="card-status">
+            <span class="card-status-dot"></span>
+            Enclave Active
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-number">42</div>
+          <div class="stat-label">Eligible Patients Matched</div>
+        </div>
+        <div class="circuit-box">
+          <code>circuit proveEligibility()</code>
+          <span>Private EHR data remains air-gapped on-premise</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Badges -->
+    <footer class="og-footer">
+      <div class="footer-pill">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        Institutional Privacy
+      </div>
+      <div class="footer-pill">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z" clip-rule="evenodd"/></svg>
+        Air-Gapped EHR Vaults
+      </div>
+      <div class="footer-pill">
+        <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+        Midnight Compact ZK Smart Contracts
+      </div>
+      <div class="footer-url">membrane.health</div>
+    </footer>
+  </div>
+</body>
+</html>

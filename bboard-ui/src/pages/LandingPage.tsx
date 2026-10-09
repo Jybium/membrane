@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mark, Arrow } from '../components/AppHeader';
+import { usePageSeo } from '../hooks';
 
 const researchPhoto =
   'https://images.unsplash.com/photo-1579154204601-01588f351e67?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=1400';
@@ -9,6 +10,12 @@ const hospitalPhoto =
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+
+  usePageSeo({
+    title: 'Membrane — Privacy-Preserving Clinical Trials on Midnight',
+    description:
+      'Zero-knowledge clinical research and hospital cohort recruitment platform built on the Midnight Network.',
+  });
 
   return (
     <div className="landing">

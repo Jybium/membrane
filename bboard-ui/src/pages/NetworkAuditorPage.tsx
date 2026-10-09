@@ -4,6 +4,7 @@ import { AppHeader } from '../components/AppHeader';
 import { RowSkeleton } from '../components/Skeleton';
 import { MIDNIGHT_CONFIG, isContractConfigured } from '../midnight/config';
 import { useApp } from '../contexts/AppContext';
+import { usePageSeo } from '../hooks';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -17,6 +18,12 @@ interface IndexRecord {
 }
 
 export const NetworkAuditorPage: React.FC = () => {
+  usePageSeo({
+    title: 'Network Auditor — Midnight Testnet Ledger & Compact Circuits | Membrane',
+    description:
+      'Inspect live Midnight Testnet state, indexer events, and zero-knowledge circuit verification.',
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession } = useApp();
 

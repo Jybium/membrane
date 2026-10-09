@@ -4,6 +4,7 @@ import { AppHeader, Arrow } from '../components/AppHeader';
 import { DynamicIcdSelect } from '../components/DynamicIcdSelect';
 import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
+import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 import { getMembraneContract, type StudyCriteria } from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
@@ -46,6 +47,12 @@ function text(record: ApiRecord, keys: string[], fallback: string): string {
 }
 
 export const ResearchLabPage: React.FC = () => {
+  usePageSeo({
+    title: 'Research Lab — Cohort Criteria & Feasibility Discovery | Membrane',
+    description:
+      'Configure clinical trial eligibility criteria and discover matching hospital cohorts without exposing patient health records.',
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession, connectWallet, dynamicCodes } = useApp();
 
