@@ -20,12 +20,21 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@midnight-ntwrk/dapp-connector-api": "4.0.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+    "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
     "@mui/icons-material": "^9.1.1",
     "@mui/material": "^9.1.1",
+    "buffer": "^6.0.3",
     "node-stdlib-browser": "^1.3.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "7.18.2"
+    "react-router-dom": "7.18.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@swc/core": "^1.15.41",
@@ -35,6 +44,8 @@
     "eslint-plugin-react": "^7.37.5",
     "typescript": "^5.9.3",
     "vite": "^8.0.14",
-    "vite-plugin-node-polyfills": "^0.28.0"
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0"
   }
 }
