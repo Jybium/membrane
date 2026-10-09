@@ -26,22 +26,22 @@ export const theme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#4f46e5', // Modern Indigo
-      light: '#6366f1',
-      dark: '#4338ca',
-      contrastText: '#ffffff',
+      main: '#1A2A39', // Deep Navy
+      light: '#24384C',
+      dark: '#121E2A',
+      contrastText: '#F6F3EC',
     },
     secondary: {
-      main: '#0284c7', // Modern Sky
-      light: '#0ea5e9',
-      dark: '#0369a1',
-      contrastText: '#ffffff',
+      main: '#4E93B4', // Muted Sky Blue
+      light: '#6BA8C4',
+      dark: '#3D7692',
+      contrastText: '#F6F3EC',
     },
     success: {
-      main: '#059669', // Clinical Emerald
-      light: '#10b981',
-      dark: '#047857',
-      contrastText: '#ffffff',
+      main: '#4E93B4',
+      light: '#6BA8C4',
+      dark: '#3D7692',
+      contrastText: '#F6F3EC',
     },
     warning: {
       main: '#d97706', // Amber
@@ -56,14 +56,14 @@ export const theme = createTheme({
       contrastText: '#ffffff',
     },
     background: {
-      default: '#090a0f', // Neutral Charcoal / Zinc Black
-      paper: '#11131a',   // Flat solid card background
+      default: '#121E2A',
+      paper: '#1A2A39',
     },
     text: {
-      primary: '#f3f4f6',
-      secondary: '#9ca3af',
+      primary: '#F6F3EC',
+      secondary: '#8CA0B2',
     },
-    divider: '#1e2230',
+    divider: '#2B4257',
   },
   shape: {
     borderRadius: 10,
@@ -72,9 +72,9 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#090a0f',
-          color: '#f3f4f6',
-          scrollbarColor: '#282d40 #090a0f',
+          backgroundColor: '#121E2A',
+          color: '#F6F3EC',
+          scrollbarColor: '#24384C #121E2A',
         },
       },
     },
@@ -82,8 +82,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          backgroundColor: '#11131a',
-          border: '1px solid #1e2230',
+          backgroundColor: '#1A2A39',
+          border: '1px solid #2B4257',
           boxShadow: 'none !important',
         },
       },
@@ -92,12 +92,12 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          backgroundColor: '#11131a',
-          border: '1px solid #1e2230',
+          backgroundColor: '#1A2A39',
+          border: '1px solid #2B4257',
           boxShadow: 'none !important',
           transition: 'border-color 0.15s ease',
           '&:hover': {
-            borderColor: '#2d3348',
+            borderColor: '#4E93B4',
           },
         },
       },
@@ -111,27 +111,27 @@ export const theme = createTheme({
           boxShadow: 'none !important',
           transition: 'all 0.15s ease',
           ...(ownerState.variant === 'contained' && ownerState.color === 'primary' && {
-            backgroundColor: '#4f46e5',
-            color: '#ffffff',
+            backgroundColor: '#4E93B4',
+            color: '#F6F3EC',
             '&:hover': {
-              backgroundColor: '#4338ca',
+              backgroundColor: '#3C7C9C',
               boxShadow: 'none !important',
             },
           }),
           ...(ownerState.variant === 'contained' && ownerState.color === 'success' && {
-            backgroundColor: '#059669',
-            color: '#ffffff',
+            backgroundColor: '#4E93B4',
+            color: '#F6F3EC',
             '&:hover': {
-              backgroundColor: '#047857',
+              backgroundColor: '#3C7C9C',
               boxShadow: 'none !important',
             },
           }),
           ...(ownerState.variant === 'outlined' && {
-            borderColor: '#262a3b',
-            color: '#f3f4f6',
+            borderColor: '#2B4257',
+            color: '#F6F3EC',
             '&:hover': {
-              borderColor: '#3b425b',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              borderColor: '#4E93B4',
+              backgroundColor: 'rgba(78, 147, 180, 0.08)',
               boxShadow: 'none !important',
             },
           }),
@@ -150,7 +150,7 @@ export const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderColor: '#1e2230',
+          borderColor: '#2B4257',
           padding: '12px 16px',
         },
       },
@@ -159,9 +159,9 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: 14,
-          backgroundColor: '#11131a',
-          border: '1px solid #262a3b',
-          boxShadow: 'none !important',
+          backgroundColor: '#1A2A39',
+          border: '1px solid #2B4257',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4) !important',
         },
       },
     },

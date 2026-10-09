@@ -185,7 +185,7 @@ export const EhrVaultPage: React.FC = () => {
             </div>
             <div>
               <span>Integrity</span>
-              <strong style={{ color: '#2b7e5d' }}>Air-gapped</strong>
+              <strong style={{ color: '#4E93B4' }}>Air-gapped</strong>
             </div>
           </div>
 

@@ -76,10 +76,10 @@ export const HospitalPage: React.FC = () => {
           });
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   const loadRequests = useCallback(async () => {
@@ -96,9 +96,7 @@ export const HospitalPage: React.FC = () => {
 
       // If URL specified a trial hex ID, find its index
       if (urlTrial) {
-        const found = list.findIndex(
-          (t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial
-        );
+        const found = list.findIndex((t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial);
         setSelectedIndex(found >= 0 ? found : 0);
       } else {
         setSelectedIndex(0);
@@ -135,7 +133,7 @@ export const HospitalPage: React.FC = () => {
     setProofStatus('loading');
     setMessage('');
     try {
-      const cleanCode = (diseaseCode || 'K30').trim().toUpperCase();
+      const cleanCode = (diseaseCode || '').trim().toUpperCase();
       const result = await apiRequest<{ patientsCount?: number }>(
         `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=40&maxAge=65`,
       );
@@ -177,9 +175,7 @@ export const HospitalPage: React.FC = () => {
           <div>
             <p>Hospital</p>
             <h1>Verify a data request</h1>
-            <span>
-              Check eligibility locally inside hospital boundaries and return only zero-knowledge results.
-            </span>
+            <span>Check eligibility locally inside hospital boundaries and return only zero-knowledge results.</span>
           </div>
           <span className="api-online">
             <i /> Demo Hospital A
@@ -216,7 +212,9 @@ export const HospitalPage: React.FC = () => {
           ) : indexStatus === 'error' ? (
             <div className="notice error">
               Could not load requests.
-              <button type="button" onClick={loadRequests}>Retry</button>
+              <button type="button" onClick={loadRequests}>
+                Retry
+              </button>
             </div>
           ) : trials.length ? (
             <div className="rows">
@@ -233,9 +231,7 @@ export const HospitalPage: React.FC = () => {
                   >
                     <span className="row-icon">CT</span>
                     <div>
-                      <strong>
-                        {text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}
-                      </strong>
+                      <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                       <small>
                         Trial ID: {hex.slice(0, 16)}… • ICD {code}
                       </small>
@@ -246,9 +242,7 @@ export const HospitalPage: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="empty compact">
-              No open requests found for ICD {diseaseCode || 'selected filter'}.
-            </div>
+            <div className="empty compact">No open requests found for ICD {diseaseCode || 'selected filter'}.</div>
           )}
         </section>
 
@@ -258,9 +252,7 @@ export const HospitalPage: React.FC = () => {
               <span>02</span>
               <div>
                 <h2>Private eligibility check</h2>
-                <p>
-                  Local enclave check against hospital records.
-                </p>
+                <p>Local enclave check against hospital records.</p>
               </div>
             </div>
             <b className="private">Local ZK Enclave</b>
@@ -271,25 +263,19 @@ export const HospitalPage: React.FC = () => {
               <span>Condition</span>
               <strong>
                 ICD {selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode} —{' '}
-                {getDiseaseName(
-                  selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode,
-                )}
+                {getDiseaseName(selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode)}
               </strong>
             </div>
             <div>
               <span>Minimum cohort</span>
               <strong>
-                <input
-                  type="number"
-                  value={minimum}
-                  onChange={(e) => handleMinChange(Number(e.target.value) || 0)}
-                />{' '}
+                <input type="number" value={minimum} onChange={(e) => handleMinChange(Number(e.target.value) || 0)} />{' '}
                 patients
               </strong>
             </div>
             <div>
               <span>Patient records</span>
-              <strong style={{ color: '#2b7e5d' }}>Remain strictly local</strong>
+              <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
             </div>
           </div>
 
@@ -299,17 +285,16 @@ export const HospitalPage: React.FC = () => {
               <div>
                 <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
                 <p>
-                  {count} matching demo records were evaluated locally inside institutional custody.
-                  Only this zero-knowledge predicate result is shared on Midnight.
+                  {count} matching demo records were evaluated locally inside institutional custody. Only this
+                  zero-knowledge predicate result is shared on Midnight.
                 </p>
               </div>
-              <button type="button" onClick={() => setProofStatus('idle')}>Run again</button>
+              <button type="button" onClick={() => setProofStatus('idle')}>
+                Run again
+              </button>
             </div>
           ) : (
             <div className="action-row">
-              <p>
-                <span className="lock">🔒</span> Raw patient rows are never loaded or disclosed.
-              </p>
               <button
                 type="button"
                 onClick={walletSession ? verify : connectWallet}
@@ -328,7 +313,9 @@ export const HospitalPage: React.FC = () => {
           {proofStatus === 'error' && (
             <div className="notice error">
               {message}
-              <button type="button" onClick={verify}>Retry</button>
+              <button type="button" onClick={verify}>
+                Retry
+              </button>
             </div>
           )}
         </section>

@@ -83,9 +83,9 @@ export const NetworkAuditorPage: React.FC = () => {
             className={`secondary ${activeTab === 'state' ? 'active' : ''}`}
             onClick={() => handleTabChange('state')}
             style={{
-              background: activeTab === 'state' ? '#173f32' : '#f9faf9',
-              color: activeTab === 'state' ? '#ffffff' : '#4b5b53',
-              borderColor: activeTab === 'state' ? '#173f32' : '#d6ddd8',
+              background: activeTab === 'state' ? '#1A2A39' : '#FAF7F0',
+              color: activeTab === 'state' ? '#F6F3EC' : '#556675',
+              borderColor: activeTab === 'state' ? '#1A2A39' : '#DFD9CD',
             }}
           >
             Ledger & Enclave State
@@ -95,9 +95,9 @@ export const NetworkAuditorPage: React.FC = () => {
             className={`secondary ${activeTab === 'circuits' ? 'active' : ''}`}
             onClick={() => handleTabChange('circuits')}
             style={{
-              background: activeTab === 'circuits' ? '#173f32' : '#f9faf9',
-              color: activeTab === 'circuits' ? '#ffffff' : '#4b5b53',
-              borderColor: activeTab === 'circuits' ? '#173f32' : '#d6ddd8',
+              background: activeTab === 'circuits' ? '#1A2A39' : '#FAF7F0',
+              color: activeTab === 'circuits' ? '#F6F3EC' : '#556675',
+              borderColor: activeTab === 'circuits' ? '#1A2A39' : '#DFD9CD',
             }}
           >
             Zero-Knowledge Circuits
@@ -107,9 +107,9 @@ export const NetworkAuditorPage: React.FC = () => {
             className={`secondary ${activeTab === 'indexer' ? 'active' : ''}`}
             onClick={() => handleTabChange('indexer')}
             style={{
-              background: activeTab === 'indexer' ? '#173f32' : '#f9faf9',
-              color: activeTab === 'indexer' ? '#ffffff' : '#4b5b53',
-              borderColor: activeTab === 'indexer' ? '#173f32' : '#d6ddd8',
+              background: activeTab === 'indexer' ? '#1A2A39' : '#FAF7F0',
+              color: activeTab === 'indexer' ? '#F6F3EC' : '#556675',
+              borderColor: activeTab === 'indexer' ? '#1A2A39' : '#DFD9CD',
             }}
           >
             Live Indexer Stream ({indexedTrials.length})
@@ -136,31 +136,31 @@ export const NetworkAuditorPage: React.FC = () => {
               </div>
               <div>
                 <span>Contract Configured</span>
-                <strong style={{ color: isContractConfigured() ? '#277657' : '#946829' }}>
+                <strong style={{ color: isContractConfigured() ? '#4E93B4' : '#D9822B' }}>
                   {isContractConfigured() ? 'Active on Testnet' : 'Local Fallback'}
                 </strong>
               </div>
               <div>
                 <span>Verifier Status</span>
-                <strong style={{ color: '#277657' }}>Enclave Operational</strong>
+                <strong style={{ color: '#4E93B4' }}>Enclave Operational</strong>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-              <div style={{ padding: 14, background: '#f8faf9', border: '1px solid #dce2dd', borderRadius: 8 }}>
-                <span style={{ fontSize: 8, color: '#798881', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
+                <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
                   Contract Address
                 </span>
-                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, wordBreak: 'break-all' }}>
+                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, wordBreak: 'break-all', color: '#1A2A39' }}>
                   {MIDNIGHT_CONFIG.contractAddress || '622af7d4d88fc425bb8df91d3bcde645dc2a4d9dea6f64beef4046a8c2758b75'}
                 </p>
               </div>
 
-              <div style={{ padding: 14, background: '#f8faf9', border: '1px solid #dce2dd', borderRadius: 8 }}>
-                <span style={{ fontSize: 8, color: '#798881', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
+                <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
                   Auditor Wallet Session
                 </span>
-                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5 }}>
+                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, color: '#1A2A39' }}>
                   {walletSession ? walletSession.address : 'Unconnected (read-only verification)'}
                 </p>
               </div>
@@ -182,22 +182,22 @@ export const NetworkAuditorPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ padding: 14, background: '#f8faf9', border: '1px solid #dce2dd', borderRadius: 8 }}>
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong>circuit proveEligibility(trialHexId, patientCount)</strong>
-                  <span className="ehr-tag">Private Witness</span>
+                  <strong style={{ color: '#1A2A39' }}>circuit proveEligibility(trialHexId, patientCount)</strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>Private Witness</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 8.5, color: '#687870' }}>
+                <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
                   Hospitals witness the private patient cohort count from their internal EHR database. The circuit enforces that <code>patientCount &gt;= minCohort</code> without revealing individual patient records.
                 </p>
               </div>
 
-              <div style={{ padding: 14, background: '#f8faf9', border: '1px solid #dce2dd', borderRadius: 8 }}>
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong>circuit createStudy(trialHexId, criteria)</strong>
-                  <span className="ehr-tag">Public Predicate</span>
+                  <strong style={{ color: '#1A2A39' }}>circuit createStudy(trialHexId, criteria)</strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>Public Predicate</span>
                 </div>
-                <p style={{ margin: 0, fontSize: 8.5, color: '#687870' }}>
+                <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
                   Research labs publish study eligibility criteria (ICD diseaseCode, minimum cohort, and age boundaries) as a verifiable predicate to the Midnight state ledger.
                 </p>
               </div>
