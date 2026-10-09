@@ -59,7 +59,7 @@ export const ResearchLabPage: React.FC = () => {
   // Read state from URL query parameters with fallbacks
   const urlIcd = searchParams.get('icd') || 'K30';
   const urlTitle = searchParams.get('title') || `${getDiseaseName(urlIcd)} Clinical Study`;
-  const urlMinCohort = searchParams.get('minCohort') || '200';
+  const urlMinCohort = searchParams.get('minCohort') || '10';
   const urlMinAge = searchParams.get('minAge') || '40';
   const urlMaxAge = searchParams.get('maxAge') || '65';
   const urlTrial = searchParams.get('trial') || '';
@@ -162,7 +162,7 @@ export const ResearchLabPage: React.FC = () => {
           const contract = await getMembraneContract(walletSession);
           const criteria: StudyCriteria = {
             diseaseCode,
-            minCohort: Math.max(1, parseInt(minimum, 10) || 200),
+            minCohort: Math.max(1, parseInt(minimum, 10) || 10),
             minAge: Math.max(0, parseInt(minAge, 10) || 40),
             maxAge: Math.max(0, parseInt(maxAge, 10) || 65),
           };

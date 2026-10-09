@@ -56,9 +56,9 @@ export const HospitalPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession, connectWallet, dynamicCodes, totalCohortCount } = useApp();
 
-  const urlIcd = searchParams.get('icd') || 'K30';
+  const urlIcd = searchParams.get('icd') || 'ALL';
   const urlTrial = searchParams.get('trial') || '';
-  const urlMinCohort = parseInt(searchParams.get('minCohort') || '200', 10) || 200;
+  const urlMinCohort = parseInt(searchParams.get('minCohort') || '10', 10) || 10;
 
   const [diseaseCode, setDiseaseCode] = useState<string>(urlIcd);
   const [minimum, setMinimum] = useState<number>(urlMinCohort);
@@ -140,7 +140,16 @@ export const HospitalPage: React.FC = () => {
     setProofStatus('loading');
     setMessage('');
     try {
-      const cleanCode = (diseaseCode || '').trim().toUpperCase();
+      const selectedTrial = trials[selectedIndex];
+      const targetCode = selectedTrial
+        ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)
+        : diseaseCode;
+      const cleanCode = (targetCode === 'ALL' ? '' : targetCode).trim().toUpperCase();
+
+      if (!cleanCode) {
+        throw new Error('Please select an active clinical trial request.');
+      }
+
       const result = await apiRequest<{ patientsCount?: number }>(
         `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=40&maxAge=65`,
       );
@@ -151,8 +160,8 @@ export const HospitalPage: React.FC = () => {
       setCount(localCount);
 
       // If wallet is connected, verify on Midnight smart contract
-      if (walletSession && isContractConfigured() && trials[selectedIndex]) {
-        const hex = text(trials[selectedIndex], ['trialHexId', 'hexId'], '');
+      if (walletSession && isContractConfigured() && selectedTrial) {
+        const hex = text(selectedTrial, ['trialHexId', 'hexId'], '');
         if (hex && localCount >= minimum) {
           try {
             const contract = await getMembraneContract(walletSession);
@@ -265,65 +274,78 @@ export const HospitalPage: React.FC = () => {
             <b className="private">Local ZK Enclave</b>
           </div>
 
-          <div className="criteria">
-            <div>
-              <span>Condition</span>
-              <strong>
-                ICD {selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode} —{' '}
-                {getDiseaseName(selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode)}
-              </strong>
-            </div>
-            <div>
-              <span>Minimum cohort</span>
-              <strong>
-                <input type="number" value={minimum} onChange={(e) => handleMinChange(Number(e.target.value) || 0)} />{' '}
-                patients
-              </strong>
-            </div>
-            <div>
-              <span>Patient records</span>
-              <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
-            </div>
-          </div>
-
-          {proofStatus === 'success' ? (
-            <div className={`result ${eligible ? 'qualified' : 'not-qualified'}`}>
-              <span>{eligible ? '✓' : '!'}</span>
-              <div>
-                <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
-                <p>
-                  {count} matching demo records were evaluated locally inside institutional custody. Only this
-                  zero-knowledge predicate result is shared on Midnight.
-                </p>
-              </div>
-              <button type="button" onClick={() => setProofStatus('idle')}>
-                Run again
-              </button>
+          {!selectedTrial ? (
+            <div className="empty compact" style={{ textAlign: 'center', padding: '24px 16px' }}>
+              <strong>No open trial selected</strong>
+              <p style={{ marginTop: '6px', fontSize: '0.88rem', color: '#677A8A' }}>
+                {trials.length === 0
+                  ? `There are no clinical trials currently indexed for ${diseaseCode === 'ALL' ? 'any condition' : `ICD ${diseaseCode}`}. Switch to "All diagnoses" above to see all trials, or publish a new trial in the Research Lab.`
+                  : 'Select an open clinical trial from Section 01 above to evaluate institutional feasibility.'}
+              </p>
             </div>
           ) : (
-            <div className="action-row">
-              <button
-                type="button"
-                onClick={walletSession ? verify : connectWallet}
-                disabled={proofStatus === 'loading'}
-              >
-                {proofStatus === 'loading'
-                  ? 'Evaluating locally…'
-                  : walletSession
-                    ? 'Verify eligibility & prove'
-                    : 'Connect wallet to verify'}
-                <Arrow />
-              </button>
-            </div>
-          )}
+            <>
+              <div className="criteria">
+                <div>
+                  <span>Condition</span>
+                  <strong>
+                    ICD {text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)} —{' '}
+                    {getDiseaseName(text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode))}
+                  </strong>
+                </div>
+                <div>
+                  <span>Minimum cohort</span>
+                  <strong>
+                    <input type="number" value={minimum} onChange={(e) => handleMinChange(Number(e.target.value) || 0)} min={1} />{' '}
+                    patients
+                  </strong>
+                </div>
+                <div>
+                  <span>Patient records</span>
+                  <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
+                </div>
+              </div>
 
-          {proofStatus === 'error' && (
-            <div className="notice error">
-              {message}
-              <button type="button" onClick={verify}>
-                Retry
-              </button>
-            </div>
+              {proofStatus === 'success' ? (
+                <div className={`result ${eligible ? 'qualified' : 'not-qualified'}`}>
+                  <span>{eligible ? '✓' : '!'}</span>
+                  <div>
+                    <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
+                    <p>
+                      {count} matching demo records were evaluated locally inside institutional custody. Only this
+                      zero-knowledge predicate result is shared on Midnight.
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setProofStatus('idle')}>
+                    Run again
+                  </button>
+                </div>
+              ) : (
+                <div className="action-row">
+                  <button
+                    type="button"
+                    onClick={walletSession ? verify : connectWallet}
+                    disabled={proofStatus === 'loading'}
+                  >
+                    {proofStatus === 'loading'
+                      ? 'Evaluating locally…'
+                      : walletSession
+                        ? 'Verify eligibility & prove'
+                        : 'Connect wallet to verify'}
+                    <Arrow />
+                  </button>
+                </div>
+              )}
+
+              {proofStatus === 'error' && (
+                <div className="notice error">
+                  {message}
+                  <button type="button" onClick={verify}>
+                    Retry
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </main>

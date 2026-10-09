@@ -124,7 +124,10 @@ export const LandingPage: React.FC = () => {
                 <i>≥ 200</i>
               </div>
               <h3>Lab defines the criteria</h3>
-              <p>The research lab publishes a public predicate: condition, cohort size, age range, and timeframe.</p>
+              <p>
+                The research lab publishes a public predicate: condition, cohort size, age range, and can choose to
+                deactivate trial enrollment when they have gotten enough hospital partners.
+              </p>
             </article>
             <article>
               <span className="step-number">02</span>
@@ -148,7 +151,7 @@ export const LandingPage: React.FC = () => {
                 <i />
               </div>
               <h3>Midnight verifies the result</h3>
-              <p>The lab receives a verified yes-or-no result and can begin a governed data-use negotiation.</p>
+              <p>The lab receives a verified proof and can begin a governed data-use negotiation.</p>
             </article>
           </div>
         </section>
