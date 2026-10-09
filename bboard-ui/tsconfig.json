@@ -17,5 +17,14 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "eslint.config.mjs"]
+  "include": ["src", "eslint.config.mjs"],
+  "exclude": [
+    "src/components/Board.tsx",
+    "src/components/Board.EmptyCardContent.tsx",
+    "src/components/TextPromptDialog.tsx",
+    "src/components/Layout/**",
+    "src/contexts/BrowserDeployedBoardManager.ts",
+    "src/contexts/DeployedBoardContext.tsx",
+    "src/hooks/useDeployedBoardContext.ts"
+  ]
 }

@@ -22,6 +22,10 @@ import topLevelAwait from 'vite-plugin-top-level-await';
 // https://vitejs.dev/config/
 export default defineConfig({
   cacheDir: './.vite',
+  server: {
+    host: true,
+    port: 5173,
+  },
   build: {
     target: 'esnext',
     minify: false,

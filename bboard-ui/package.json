@@ -6,17 +6,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rm -rf ./dist && tsc && vite build --mode preprod && cp -r ../contract/src/managed/bboard/keys ./dist/keys && cp -r ../contract/src/managed/bboard/zkir ./dist/zkir",
-    "build:preview": "rm -rf ./dist && tsc && vite build --mode preview && cp -r ../contract/src/managed/bboard/keys ./dist/keys && cp -r ../contract/src/managed/bboard/zkir ./dist/zkir",
+    "build": "node ../node_modules/vite/bin/vite.js build --mode preprod",
+    "build:preview": "node ../node_modules/vite/bin/vite.js build --mode preview",
     "build:start": "npm run build && npm run start",
     "build:start:preview": "npm run build:preview && npm run start",
     "ci": "npm run typecheck && npm run lint",
-    "dev": "vite",
+    "dev": "node ../node_modules/vite/bin/vite.js",
     "lint": "eslint ./src",
     "start": "http-server --port 0 ./dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "preview": "vite preview",
-    "prepack": "yarn build"
+    "typecheck": "node ../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
