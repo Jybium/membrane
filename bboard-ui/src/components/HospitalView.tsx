@@ -70,7 +70,7 @@ export const HospitalView: React.FC = () => {
     const count = await MembraneBackendService.getPatientRequirementCount(
       trial.diseaseCode,
       trial.minAge,
-      trial.maxAge
+      trial.maxAge,
     );
 
     setEvaluations((prev) => ({
@@ -284,7 +284,10 @@ export const HospitalView: React.FC = () => {
                 <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.6, color: '#10b981' }}>
                   0.00% (ZERO)
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#34d399', display: 'block', mt: 0.8, fontWeight: 600, fontSize: '0.72rem' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#34d399', display: 'block', mt: 0.8, fontWeight: 600, fontSize: '0.72rem' }}
+                >
                   HIPAA & GDPR Compliant
                 </Typography>
               </CardContent>
@@ -310,13 +313,20 @@ export const HospitalView: React.FC = () => {
               <Chip
                 label="Air-Gapped Witness"
                 size="small"
-                sx={{ height: 18, fontSize: '0.62rem', background: '#142738', color: '#38bdf8', border: '1px solid #1d4666' }}
+                sx={{
+                  height: 18,
+                  fontSize: '0.62rem',
+                  background: '#142738',
+                  color: '#38bdf8',
+                  border: '1px solid #1d4666',
+                }}
               />
             </Box>
             <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.55, fontSize: '0.82rem' }}>
-              Your hospital's internal database calculates candidate cohort size locally. The Midnight Proof Server produces a
-              mathematical proof that your cohort meets or exceeds the required threshold (<code>Count ≥ Min Patients</code>). No patient
-              names, medical records, or exact cohort numbers are ever broadcast to the blockchain.
+              Your hospital&apos;s internal database calculates candidate cohort size locally. The Midnight Proof Server
+              produces a mathematical proof that your cohort meets or exceeds the required threshold (
+              <code>Count ≥ Min Patients</code>). No patient names, medical records, or exact cohort numbers are ever
+              broadcast to the blockchain.
             </Typography>
           </Alert>
 
@@ -357,7 +367,13 @@ export const HospitalView: React.FC = () => {
                   variant={eligibilityFilter === 'all' ? 'contained' : 'outlined'}
                   color="inherit"
                   onClick={() => setEligibilityFilter('all')}
-                  sx={{ borderRadius: '8px', fontSize: '0.78rem', color: eligibilityFilter === 'all' ? '#fff' : '#8b92a5', borderColor: '#232738', boxShadow: 'none !important' }}
+                  sx={{
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    color: eligibilityFilter === 'all' ? '#fff' : '#8b92a5',
+                    borderColor: '#232738',
+                    boxShadow: 'none !important',
+                  }}
                 >
                   All Trials ({activeTrials.length})
                 </Button>
@@ -386,7 +402,13 @@ export const HospitalView: React.FC = () => {
                   startIcon={<Refresh />}
                   onClick={() => void evaluateAll()}
                   disabled={isReevaluating}
-                  sx={{ borderRadius: '8px', borderColor: '#262a3b', color: '#d1d5db', ml: { md: 1 }, boxShadow: 'none !important' }}
+                  sx={{
+                    borderRadius: '8px',
+                    borderColor: '#262a3b',
+                    color: '#d1d5db',
+                    ml: { md: 1 },
+                    boxShadow: 'none !important',
+                  }}
                 >
                   {isReevaluating ? 'Evaluating...' : 'Re-check EHR'}
                 </Button>
@@ -417,11 +439,7 @@ export const HospitalView: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     background: '#11131a',
-                    border: isEnrolled
-                      ? '1px solid #059669'
-                      : isEligible
-                      ? '1px solid #1a3b2b'
-                      : '1px solid #1e2230',
+                    border: isEnrolled ? '1px solid #059669' : isEligible ? '1px solid #1a3b2b' : '1px solid #1e2230',
                     boxShadow: 'none !important',
                   }}
                 >
@@ -499,7 +517,10 @@ export const HospitalView: React.FC = () => {
                       }}
                     >
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}
+                        >
                           AGE QUALIFICATION
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#f3f4f6', mt: 0.2 }}>
@@ -507,7 +528,10 @@ export const HospitalView: React.FC = () => {
                         </Typography>
                       </Box>
                       <Box>
-                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}
+                        >
                           ENROLLED PARTICIPANTS
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#f3f4f6', mt: 0.2 }}>
@@ -571,7 +595,12 @@ export const HospitalView: React.FC = () => {
                           size="small"
                           startIcon={<Verified />}
                           onClick={() => void handleVerify(trial)}
-                          sx={{ borderRadius: '8px', fontWeight: 600, borderColor: '#10b981', boxShadow: 'none !important' }}
+                          sx={{
+                            borderRadius: '8px',
+                            fontWeight: 600,
+                            borderColor: '#10b981',
+                            boxShadow: 'none !important',
+                          }}
                         >
                           Verify Commitment
                         </Button>
@@ -619,7 +648,8 @@ export const HospitalView: React.FC = () => {
               Enrolled Clinical Protocols on Midnight
             </Typography>
             <Typography variant="body2" sx={{ color: '#8b92a5', fontSize: '0.84rem' }}>
-              These protocols represent clinical trials where this hospital node has mathematically proven compliance and committed an anonymous public identity tag to the Midnight ledger.
+              These protocols represent clinical trials where this hospital node has mathematically proven compliance
+              and committed an anonymous public identity tag to the Midnight ledger.
             </Typography>
           </Box>
 
@@ -685,7 +715,12 @@ export const HospitalView: React.FC = () => {
                       size="small"
                       startIcon={<Verified />}
                       onClick={() => void handleVerify(trial)}
-                      sx={{ borderRadius: '8px', fontWeight: 600, borderColor: '#10b981', boxShadow: 'none !important' }}
+                      sx={{
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        borderColor: '#10b981',
+                        boxShadow: 'none !important',
+                      }}
                     >
                       Verify Membership Proof
                     </Button>
@@ -740,9 +775,12 @@ export const HospitalView: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#34d399', mb: 0.8 }}>
                 Proof Verified On-Chain!
               </Typography>
-              <Typography variant="body2" sx={{ color: '#8b92a5', mb: 2.5, maxWidth: '440px', mx: 'auto', fontSize: '0.82rem' }}>
-                Your hospital cryptographic public identity tag is permanently registered in the trial's enrollment set on
-                the Midnight blockchain.
+              <Typography
+                variant="body2"
+                sx={{ color: '#8b92a5', mb: 2.5, maxWidth: '440px', mx: 'auto', fontSize: '0.82rem' }}
+              >
+                Your hospital cryptographic public identity tag is permanently registered in the trial&apos;s enrollment
+                set on the Midnight blockchain.
               </Typography>
 
               <Box
@@ -757,7 +795,10 @@ export const HospitalView: React.FC = () => {
                 <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 700, display: 'block', mb: 0.4 }}>
                   VERIFIED MEMBERSHIP WITNESS
                 </Typography>
-                <Typography variant="caption" sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#38bdf8', display: 'block' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#38bdf8', display: 'block' }}
+                >
                   trialsEnrollments.lookup(trialId).member(hospitalTag) === true
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 600, display: 'block', mt: 0.6 }}>
@@ -772,13 +813,19 @@ export const HospitalView: React.FC = () => {
                 Not Found in Enrollment Set
               </Typography>
               <Typography variant="body2" sx={{ color: '#8b92a5', fontSize: '0.82rem' }}>
-                This hospital identity tag is not currently registered in the trial's on-chain enrollment registry.
+                This hospital identity tag is not currently registered in the trial&apos;s on-chain enrollment registry.
               </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ p: 1.5 }}>
-          <Button onClick={() => setVerifyingTrial(null)} color="primary" variant="contained" size="small" sx={{ px: 2.5, borderRadius: '8px', boxShadow: 'none !important' }}>
+          <Button
+            onClick={() => setVerifyingTrial(null)}
+            color="primary"
+            variant="contained"
+            size="small"
+            sx={{ px: 2.5, borderRadius: '8px', boxShadow: 'none !important' }}
+          >
             Done
           </Button>
         </DialogActions>

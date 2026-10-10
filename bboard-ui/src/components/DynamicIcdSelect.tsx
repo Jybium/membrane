@@ -1,10 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import {
-  ICD10_REGISTRY,
-  getDiseaseCondition,
-  type DynamicIcdOption,
-  type IcdCondition,
-} from '../config/icdRegistry';
+import { ICD10_REGISTRY, getDiseaseCondition, type DynamicIcdOption, type IcdCondition } from '../config/icdRegistry';
 
 export interface DynamicIcdSelectProps {
   value: string;
@@ -86,15 +81,11 @@ export const DynamicIcdSelect: React.FC<DynamicIcdSelectProps> = ({
   const filteredOptions = useMemo(() => {
     if (!cleanQuery) return allOptions;
     return allOptions.filter(
-      (opt) =>
-        opt.code.toUpperCase().includes(cleanQuery) ||
-        opt.name.toUpperCase().includes(cleanQuery)
+      (opt) => opt.code.toUpperCase().includes(cleanQuery) || opt.name.toUpperCase().includes(cleanQuery),
     );
   }, [allOptions, cleanQuery]);
 
-  const hasExactMatch = cleanQuery
-    ? allOptions.some((opt) => opt.code.toUpperCase() === cleanQuery)
-    : false;
+  const hasExactMatch = cleanQuery ? allOptions.some((opt) => opt.code.toUpperCase() === cleanQuery) : false;
 
   const isAllSelected = value === '' || value.toUpperCase() === 'ALL';
   const selectedCondition = value && !isAllSelected ? getDiseaseCondition(value) : null;
@@ -135,12 +126,7 @@ export const DynamicIcdSelect: React.FC<DynamicIcdSelectProps> = ({
             <span className="clean-placeholder">{placeholder}</span>
           )}
         </span>
-        <svg
-          className={`clean-arrow ${isOpen ? 'up' : ''}`}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          aria-hidden="true"
-        >
+        <svg className={`clean-arrow ${isOpen ? 'up' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path
             fillRule="evenodd"
             d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
@@ -173,12 +159,7 @@ export const DynamicIcdSelect: React.FC<DynamicIcdSelectProps> = ({
               className="clean-select-search-input"
             />
             {search && (
-              <button
-                type="button"
-                className="clean-search-clear"
-                onClick={() => setSearch('')}
-                title="Clear search"
-              >
+              <button type="button" className="clean-search-clear" onClick={() => setSearch('')} title="Clear search">
                 ✕
               </button>
             )}
@@ -222,11 +203,7 @@ export const DynamicIcdSelect: React.FC<DynamicIcdSelectProps> = ({
 
             {/* Custom code quick option */}
             {allowCustomInput && cleanQuery && !hasExactMatch && (
-              <button
-                type="button"
-                className="clean-select-custom-item"
-                onClick={() => handleSelect(cleanQuery)}
-              >
+              <button type="button" className="clean-select-custom-item" onClick={() => handleSelect(cleanQuery)}>
                 <span>Use custom code</span>
                 <strong>{cleanQuery}</strong>
               </button>

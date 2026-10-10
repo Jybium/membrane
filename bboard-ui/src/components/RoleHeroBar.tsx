@@ -148,13 +148,24 @@ export const RoleHeroBar: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.015em', color: '#f3f4f6', mb: 0.4 }}>
                 {config.organization}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#8b92a5', maxWidth: '820px', lineHeight: 1.5, fontSize: '0.82rem' }}>
+              <Typography
+                variant="body2"
+                sx={{ color: '#8b92a5', maxWidth: '820px', lineHeight: 1.5, fontSize: '0.82rem' }}
+              >
                 {config.subtitle}
               </Typography>
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', md: 'flex-end' }, gap: 1.2, flexShrink: 0 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: { xs: 'flex-start', md: 'flex-end' },
+              gap: 1.2,
+              flexShrink: 0,
+            }}
+          >
             <Button
               variant="outlined"
               size="small"

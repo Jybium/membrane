@@ -32,14 +32,7 @@ import { MembraneBackendService, type BackendMode } from '../services/membraneBa
 import { PortalSwitcherDialog } from './PortalSwitcherDialog';
 
 export const Navbar: React.FC = () => {
-  const {
-    role,
-    setRole,
-    isWalletConnected,
-    walletAddress,
-    networkId,
-    connectWallet,
-  } = useMembrane();
+  const { role, setRole, isWalletConnected, walletAddress, networkId, connectWallet } = useMembrane();
 
   const [copied, setCopied] = useState<boolean>(false);
   const [switcherOpen, setSwitcherOpen] = useState<boolean>(false);
@@ -111,9 +104,27 @@ export const Navbar: React.FC = () => {
   const roleInfo = currentRoleConfig();
 
   const navPortals: { role: UserRole; label: string; org: string; icon: React.ReactElement; color: string }[] = [
-    { role: 'research-lab', label: 'Research Sponsor', org: 'Apex BioTherapeutics', icon: <Science sx={{ fontSize: 16 }} />, color: '#6366f1' },
-    { role: 'hospital', label: 'Healthcare Provider', org: 'St. Jude Clinical Site', icon: <LocalHospital sx={{ fontSize: 16 }} />, color: '#10b981' },
-    { role: 'ledger-explorer', label: 'Ledger Explorer', org: 'Public Verifier', icon: <Public sx={{ fontSize: 16 }} />, color: '#f59e0b' },
+    {
+      role: 'research-lab',
+      label: 'Research Sponsor',
+      org: 'Apex BioTherapeutics',
+      icon: <Science sx={{ fontSize: 16 }} />,
+      color: '#6366f1',
+    },
+    {
+      role: 'hospital',
+      label: 'Healthcare Provider',
+      org: 'St. Jude Clinical Site',
+      icon: <LocalHospital sx={{ fontSize: 16 }} />,
+      color: '#10b981',
+    },
+    {
+      role: 'ledger-explorer',
+      label: 'Ledger Explorer',
+      org: 'Public Verifier',
+      icon: <Public sx={{ fontSize: 16 }} />,
+      color: '#f59e0b',
+    },
   ];
 
   return (
@@ -312,8 +323,8 @@ export const Navbar: React.FC = () => {
                     {isCheckingBackend
                       ? 'Probing :3000...'
                       : backendMode === 'online'
-                      ? 'API :3000 Live'
-                      : 'Vault: Air-Gapped'}
+                        ? 'API :3000 Live'
+                        : 'Vault: Air-Gapped'}
                   </Typography>
                 </Box>
               </Tooltip>
@@ -426,7 +437,10 @@ export const Navbar: React.FC = () => {
         }}
       >
         <Box sx={{ px: 2, py: 1 }}>
-          <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.04em', display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.04em', display: 'block' }}
+          >
             SELECT STAKEHOLDER PORTAL
           </Typography>
         </Box>
@@ -451,12 +465,8 @@ export const Navbar: React.FC = () => {
           >
             <ListItemIcon sx={{ color: item.color, minWidth: 32 }}>{item.icon}</ListItemIcon>
             <Box>
-              <Typography sx={{ fontWeight: 600, fontSize: '0.84rem', color: '#f3f4f6' }}>
-                {item.label}
-              </Typography>
-              <Typography sx={{ fontSize: '0.7rem', color: '#8b92a5' }}>
-                {item.org}
-              </Typography>
+              <Typography sx={{ fontWeight: 600, fontSize: '0.84rem', color: '#f3f4f6' }}>{item.label}</Typography>
+              <Typography sx={{ fontSize: '0.7rem', color: '#8b92a5' }}>{item.org}</Typography>
             </Box>
           </MenuItem>
         ))}

@@ -40,13 +40,12 @@ export function getMidnightProvider(): MidnightExtensionProvider | null {
   // Otherwise pick any Midnight-compliant provider
   const providers = Object.values(win.midnight);
   return (
-    providers.find(
-      (w) =>
-        Boolean(
-          w &&
-            typeof w === 'object' &&
-            (w.apiVersion || typeof w.connect === 'function' || typeof w.isEnabled === 'function')
-        )
+    providers.find((w) =>
+      Boolean(
+        w &&
+        typeof w === 'object' &&
+        (w.apiVersion || typeof w.connect === 'function' || typeof w.isEnabled === 'function'),
+      ),
     ) || null
   );
 }

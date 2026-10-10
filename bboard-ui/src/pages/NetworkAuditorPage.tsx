@@ -20,8 +20,7 @@ interface IndexRecord {
 export const NetworkAuditorPage: React.FC = () => {
   usePageSeo({
     title: 'Network Auditor — Midnight Testnet Ledger & Compact Circuits | Membrane',
-    description:
-      'Inspect live Midnight Testnet state, indexer events, and zero-knowledge circuit verification.',
+    description: 'Inspect live Midnight Testnet state, indexer events, and zero-knowledge circuit verification.',
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,7 +40,7 @@ export const NetworkAuditorPage: React.FC = () => {
         next.set('tab', tab);
         return next;
       },
-      { replace: true }
+      { replace: true },
     );
   };
 
@@ -158,8 +157,17 @@ export const NetworkAuditorPage: React.FC = () => {
                 <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
                   Contract Address
                 </span>
-                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, wordBreak: 'break-all', color: '#1A2A39' }}>
-                  {MIDNIGHT_CONFIG.contractAddress || '622af7d4d88fc425bb8df91d3bcde645dc2a4d9dea6f64beef4046a8c2758b75'}
+                <p
+                  style={{
+                    margin: '6px 0 0',
+                    fontFamily: 'monospace',
+                    fontSize: 9.5,
+                    wordBreak: 'break-all',
+                    color: '#1A2A39',
+                  }}
+                >
+                  {MIDNIGHT_CONFIG.contractAddress ||
+                    '622af7d4d88fc425bb8df91d3bcde645dc2a4d9dea6f64beef4046a8c2758b75'}
                 </p>
               </div>
 
@@ -190,22 +198,69 @@ export const NetworkAuditorPage: React.FC = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong style={{ color: '#1A2A39' }}>circuit proveEligibility(trialHexId, patientCount)</strong>
-                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>Private Witness</span>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
+                >
+                  <strong style={{ color: '#1A2A39' }}>
+                    circuit createTrial(diseaseCode, minAge, maxAge, minPatientSampleCount)
+                  </strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>
+                    Research Lab Circuit
+                  </span>
                 </div>
                 <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
-                  Hospitals witness the private patient cohort count from their internal EHR database. The circuit enforces that <code>patientCount &gt;= minCohort</code> without revealing individual patient records.
+                  Research labs publish study eligibility criteria. Enforces <code>minPatientSampleCount &gt; 0</code>{' '}
+                  and <code>maxAge &gt;= minAge</code>, computes trial tag hash, and registers trial in{' '}
+                  <code>activeTrials</code> map.
                 </p>
               </div>
 
               <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong style={{ color: '#1A2A39' }}>circuit createStudy(trialHexId, criteria)</strong>
-                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>Public Predicate</span>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
+                >
+                  <strong style={{ color: '#1A2A39' }}>circuit trialEnrollment(trialIdHash: Bytes&lt;32&gt;)</strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>
+                    Hospital ZK Enrolment
+                  </span>
                 </div>
                 <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
-                  Research labs publish study eligibility criteria (ICD diseaseCode, minimum cohort, and age boundaries) as a verifiable predicate to the Midnight state ledger.
+                  Hospitals witness local EHR records via <code>getHospitalPatientsAggregate()</code>. Enforces{' '}
+                  <code>patientAggregateCount &gt;= minPatientSampleCount</code> and joins{' '}
+                  <code>trialsEnrollments</code> without revealing patient data.
+                </p>
+              </div>
+
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
+                >
+                  <strong style={{ color: '#1A2A39' }}>circuit cancelTrial(): Bytes&lt;32&gt;</strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>
+                    Governance Circuit
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
+                  Allows the creating research lab to close trial recruitment, atomically moving the study from{' '}
+                  <code>activeTrials</code> to <code>inactiveTrials</code>.
+                </p>
+              </div>
+
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}
+                >
+                  <strong style={{ color: '#1A2A39' }}>
+                    circuits activeTrialDetail / isTrialActive / validateTrialEnrollment
+                  </strong>
+                  <span className="ehr-tag" style={{ background: '#EBF4F8', color: '#1A2A39' }}>
+                    Ledger Inspection
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: 8.5, color: '#556675' }}>
+                  Verifies study parameters, active status, and mutual institutional enrollment proofs against ledger
+                  maps: <code>activeTrials</code>, <code>inactiveTrials</code>, <code>trialsEnrollments</code>, and{' '}
+                  <code>trialCounter</code>.
                 </p>
               </div>
             </div>
@@ -237,9 +292,7 @@ export const NetworkAuditorPage: React.FC = () => {
                   <div className="row" key={t.id || t.trialHexId || idx}>
                     <span className="row-icon">ZK</span>
                     <div>
-                      <strong>
-                        Trial Hex: {(t.trialHexId || '').slice(0, 24)}…
-                      </strong>
+                      <strong>Trial Hex: {(t.trialHexId || '').slice(0, 24)}…</strong>
                       <small>
                         ICD {t.diseaseCode || '—'} • Indexed at {t.createdAt ? t.createdAt.split('T')[0] : 'Today'}
                       </small>

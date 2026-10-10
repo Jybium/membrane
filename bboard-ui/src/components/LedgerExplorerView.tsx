@@ -107,7 +107,7 @@ export const LedgerExplorerView: React.FC = () => {
       (t) =>
         t.diseaseCode.toLowerCase().includes(q) ||
         t.diseaseName.toLowerCase().includes(q) ||
-        t.trialIdHex.toLowerCase().includes(q)
+        t.trialIdHex.toLowerCase().includes(q),
     );
   }, [activeTrials, searchQuery]);
 
@@ -151,16 +151,8 @@ export const LedgerExplorerView: React.FC = () => {
             '& .MuiTabs-indicator': { display: 'none' },
           }}
         >
-          <Tab
-            icon={<Memory sx={{ fontSize: 16 }} />}
-            iconPosition="start"
-            label="Compact Contract Ledger State"
-          />
-          <Tab
-            icon={<Code sx={{ fontSize: 16 }} />}
-            iconPosition="start"
-            label="Zero-Knowledge Circuits (3)"
-          />
+          <Tab icon={<Memory sx={{ fontSize: 16 }} />} iconPosition="start" label="Compact Contract Ledger State" />
+          <Tab icon={<Code sx={{ fontSize: 16 }} />} iconPosition="start" label="Zero-Knowledge Circuits (3)" />
           <Tab
             icon={<AccountTree sx={{ fontSize: 16 }} />}
             iconPosition="start"
@@ -465,7 +457,16 @@ export const LedgerExplorerView: React.FC = () => {
       {currentTab === 2 && (
         <Card sx={{ background: '#11131a', border: '1px solid #1e2230', boxShadow: 'none' }}>
           <CardContent sx={{ p: 2.8 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1.5, mb: 2 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                gap: 1.5,
+                mb: 2,
+              }}
+            >
               <Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#f3f4f6' }}>
                   trialsEnrollments: Map&lt;trialIdHash, Set&lt;hospitalTag&gt;&gt;
@@ -581,7 +582,8 @@ export const LedgerExplorerView: React.FC = () => {
                             py: 0.2,
                           }}
                         >
-                          • [Hospital Tag #{i + 1}]: 0x7f4e9102c89283719283719283719283719283719283719283719283719283{i}b
+                          • [Hospital Tag #{i + 1}]: 0x7f4e9102c89283719283719283719283719283719283719283719283719283{i}
+                          b
                         </Typography>
                       ))
                     )}

@@ -52,7 +52,7 @@ export const EhrVaultPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { dynamicCodes, totalCohortCount } = useApp();
+  const { dynamicCodes } = useApp();
 
   const urlIcd = searchParams.get('icd') || '';
   const urlQ = searchParams.get('q') || '';
@@ -77,10 +77,10 @@ export const EhrVaultPage: React.FC = () => {
           });
           return next;
         },
-        { replace: true }
+        { replace: true },
       );
     },
-    [setSearchParams]
+    [setSearchParams],
   );
 
   const fetchPatients = useCallback(async () => {
@@ -138,9 +138,7 @@ export const EhrVaultPage: React.FC = () => {
           <div>
             <p>Institutional EHR Perimeter</p>
             <h1>Consented Patient Records Vault</h1>
-            <span>
-              Demo Hospital A internal electronic health records. Air-gapped and strictly private.
-            </span>
+            <span>Demo Hospital A internal electronic health records. Air-gapped and strictly private.</span>
           </div>
           <span className="api-online">
             <i /> Custody Intact
@@ -216,7 +214,9 @@ export const EhrVaultPage: React.FC = () => {
           ) : error ? (
             <div className="notice error">
               {error}
-              <button type="button" onClick={fetchPatients}>Retry</button>
+              <button type="button" onClick={fetchPatients}>
+                Retry
+              </button>
             </div>
           ) : filteredPatients.length === 0 ? (
             <div className="empty">

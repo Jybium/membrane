@@ -19,15 +19,7 @@ import {
   InputAdornment,
   Tooltip,
 } from '@mui/material';
-import {
-  Lock,
-  VerifiedUser,
-  Search,
-  Security,
-  People,
-  MedicalServices,
-  ContentCopy,
-} from '@mui/icons-material';
+import { Lock, VerifiedUser, Search, Security, People, MedicalServices, ContentCopy } from '@mui/icons-material';
 import { MembraneBackendService, type PatientDto } from '../services/membraneBackendService';
 import { ICD10_DICTIONARY } from '../contexts/MembraneContext';
 
@@ -44,11 +36,7 @@ export const HospitalEhrView: React.FC = () => {
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await MembraneBackendService.getHospitalPatients(
-        page,
-        15,
-        filterCode || undefined
-      );
+      const res = await MembraneBackendService.getHospitalPatients(page, 15, filterCode || undefined);
       setPatients(res.data);
       setTotalItems(res.meta?.totalItems ?? res.data.length);
       setTotalPages(res.meta?.totalPages ?? 1);
@@ -75,7 +63,7 @@ export const HospitalEhrView: React.FC = () => {
         (p.patientId || '').toLowerCase().includes(q) ||
         (p.firstName || '').toLowerCase().includes(q) ||
         (p.lastName || '').toLowerCase().includes(q) ||
-        (p.diseaseCode || '').toLowerCase().includes(q)
+        (p.diseaseCode || '').toLowerCase().includes(q),
     );
   }, [patients, searchQuery]);
 
@@ -87,7 +75,8 @@ export const HospitalEhrView: React.FC = () => {
           Institutional Electronic Health Records (EHR) Vault
         </Typography>
         <Typography variant="body2" sx={{ color: '#8b92a5', fontSize: '0.84rem' }}>
-          Simulated institutional patient database. This repository is air-gapped and strictly private to the healthcare facility.
+          Simulated institutional patient database. This repository is air-gapped and strictly private to the healthcare
+          facility.
         </Typography>
       </Box>
 
@@ -110,12 +99,18 @@ export const HospitalEhrView: React.FC = () => {
           <Chip
             label="100% On-Premise"
             size="small"
-            sx={{ height: 18, fontSize: '0.62rem', background: '#122e20', color: '#34d399', border: '1px solid #1d4833' }}
+            sx={{
+              height: 18,
+              fontSize: '0.62rem',
+              background: '#122e20',
+              color: '#34d399',
+              border: '1px solid #1d4833',
+            }}
           />
         </Box>
         <Typography variant="body2" sx={{ color: '#cbd5e1', lineHeight: 1.55, fontSize: '0.82rem' }}>
-          Patient names, institutional medical IDs, and individual histories never leave this hospital boundary.
-          When participating in a clinical trial, the local Midnight proof server (:6300) runs a zero-knowledge circuit
+          Patient names, institutional medical IDs, and individual histories never leave this hospital boundary. When
+          participating in a clinical trial, the local Midnight proof server (:6300) runs a zero-knowledge circuit
           witness locally to prove eligibility without leaking records.
         </Typography>
       </Alert>
@@ -267,7 +262,9 @@ export const HospitalEhrView: React.FC = () => {
                 <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>PATIENT ID</TableCell>
                 <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>FULL NAME</TableCell>
                 <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>AGE</TableCell>
-                <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>DIAGNOSIS (ICD-10)</TableCell>
+                <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
+                  DIAGNOSIS (ICD-10)
+                </TableCell>
                 <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>RECORD DATE</TableCell>
                 <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>CONSENT STATUS</TableCell>
               </TableRow>
@@ -355,9 +352,7 @@ export const HospitalEhrView: React.FC = () => {
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{ color: '#6b7280', fontSize: '0.78rem' }}>
-                      {p.createdAt || '2026-09-15'}
-                    </TableCell>
+                    <TableCell sx={{ color: '#6b7280', fontSize: '0.78rem' }}>{p.createdAt || '2026-09-15'}</TableCell>
 
                     <TableCell>
                       <Chip
@@ -383,13 +378,7 @@ export const HospitalEhrView: React.FC = () => {
 
         {totalPages > 1 && (
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', borderTop: '1px solid #1e2230' }}>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(_, p) => setPage(p)}
-              color="primary"
-              size="small"
-            />
+            <Pagination count={totalPages} page={page} onChange={(_, p) => setPage(p)} color="primary" size="small" />
           </Box>
         )}
       </Card>

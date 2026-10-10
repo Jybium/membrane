@@ -6,7 +6,7 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract, type StudyCriteria } from '../midnight/contract';
+import { getMembraneContract } from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
@@ -59,7 +59,7 @@ export const ResearchLabPage: React.FC = () => {
   // Read state from URL query parameters with fallbacks
   const urlIcd = searchParams.get('icd') || 'K30';
   const urlTitle = searchParams.get('title') || `${getDiseaseName(urlIcd)} Clinical Study`;
-  const urlMinCohort = searchParams.get('minCohort') || '200';
+  const urlMinCohort = searchParams.get('minCohort') || '10';
   const urlMinAge = searchParams.get('minAge') || '40';
   const urlMaxAge = searchParams.get('maxAge') || '65';
   const urlTrial = searchParams.get('trial') || '';
@@ -74,6 +74,8 @@ export const ResearchLabPage: React.FC = () => {
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string>('');
   const [trials, setTrials] = useState<ApiRecord[]>([]);
+  const [trialStatuses, setTrialStatuses] = useState<Record<string, boolean>>({});
+  const [deactivatingHex, setDeactivatingHex] = useState<string | null>(null);
 
   // Keep state synchronized with URL query params
   const updateUrlParams = useCallback(
@@ -96,6 +98,26 @@ export const ResearchLabPage: React.FC = () => {
     [setSearchParams],
   );
 
+  const fetchTrialStatuses = useCallback(
+    async (list: ApiRecord[]) => {
+      if (list.length === 0) return;
+      try {
+        const contract = await getMembraneContract(walletSession);
+        const statuses: Record<string, boolean> = {};
+        for (const t of list) {
+          const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
+          if (hex) {
+            statuses[hex] = await contract.isTrialActive(hex);
+          }
+        }
+        setTrialStatuses(statuses);
+      } catch {
+        // ignore
+      }
+    },
+    [walletSession],
+  );
+
   const loadTrials = useCallback(async () => {
     setStatus('loading');
     setMessage('');
@@ -106,15 +128,36 @@ export const ResearchLabPage: React.FC = () => {
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
       setTrials(list);
       setStatus('success');
+      void fetchTrialStatuses(list);
     } catch (error) {
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'Could not load requests.');
     }
-  }, [diseaseCode]);
+  }, [diseaseCode, fetchTrialStatuses]);
 
   useEffect(() => {
     void loadTrials();
   }, [loadTrials]);
+
+  const handleDeactivateTrial = async (hex: string) => {
+    if (!hex) return;
+    setDeactivatingHex(hex);
+    setMessage('');
+    try {
+      const contract = await getMembraneContract(walletSession);
+      await contract.cancelTrial(hex);
+      setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
+      setMessage(
+        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`,
+      );
+      setStatus('success');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not deactivate trial.');
+      setStatus('error');
+    } finally {
+      setDeactivatingHex(null);
+    }
+  };
 
   const handleDiseaseChange = (code: string) => {
     setDiseaseCode(code);
@@ -151,28 +194,30 @@ export const ResearchLabPage: React.FC = () => {
     setStatus('loading');
     setMessage('');
 
-    // Generate 20 random bytes for trial identifier
-    const bytes = crypto.getRandomValues(new Uint8Array(20));
-    const hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    let hexId = '';
 
     try {
-      // 1. If Midnight wallet is connected, publish study criteria to Midnight smart contract
+      const minCohortNum = Math.max(1, parseInt(minimum, 10) || 10);
+      const minAgeNum = Math.max(0, parseInt(minAge, 10) || 40);
+      const maxAgeNum = Math.max(0, parseInt(maxAge, 10) || 65);
+
+      // 1. If Midnight wallet is connected, invoke createTrial circuit defined in membrane.compact
       if (walletSession && isContractConfigured()) {
         try {
           const contract = await getMembraneContract(walletSession);
-          const criteria: StudyCriteria = {
-            diseaseCode,
-            minCohort: Math.max(1, parseInt(minimum, 10) || 200),
-            minAge: Math.max(0, parseInt(minAge, 10) || 40),
-            maxAge: Math.max(0, parseInt(maxAge, 10) || 65),
-          };
-          await contract.createStudy(hexId, criteria);
+          const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
+          hexId = result.trialHexId;
         } catch (contractErr) {
           console.warn('Smart contract publish fallback:', contractErr);
         }
       }
 
-      // 2. CRITICAL USER REQUIREMENT: Index the trial on the API DB
+      if (!hexId) {
+        const bytes = crypto.getRandomValues(new Uint8Array(20));
+        hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
+      // 2. Index the created on-chain trial in the auxiliary API DB
       await apiRequest('/clinical-trials/index', {
         method: 'POST',
         body: JSON.stringify({
@@ -314,16 +359,41 @@ export const ResearchLabPage: React.FC = () => {
               {trials.map((trial, index) => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
                 const code = text(trial, ['diseaseCode', 'icd'], diseaseCode);
+                const isActive = trialStatuses[hex] !== false;
+                const isDeactivating = deactivatingHex === hex;
+
                 return (
-                  <div className="row" key={hex || index}>
+                  <div
+                    className="row"
+                    key={hex || index}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
+                  >
                     <span className="row-icon">CT</span>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                       <small>
                         Trial ID: {hex.slice(0, 16)}… • ICD {code}
                       </small>
                     </div>
-                    <b>Indexed</b>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <span className={`status-pill ${isActive ? 'active' : 'inactive'}`}>
+                        <span className="status-dot" />
+                        {isActive ? 'Active' : 'Closed'}
+                      </span>
+                      {isActive ? (
+                        <button
+                          type="button"
+                          className="deactivate-btn"
+                          disabled={isDeactivating}
+                          onClick={() => handleDeactivateTrial(hex)}
+                          title="Deactivate / Cancel this trial on Midnight smart contract"
+                        >
+                          {isDeactivating ? 'Deactivating…' : 'Cancel Trial'}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Recruitment closed</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

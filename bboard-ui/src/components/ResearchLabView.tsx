@@ -166,11 +166,7 @@ export const ResearchLabView: React.FC = () => {
             iconPosition="start"
             label={`Active Protocols (${activeTrials.length})`}
           />
-          <Tab
-            icon={<Tune sx={{ fontSize: 16 }} />}
-            iconPosition="start"
-            label="Protocol Designer"
-          />
+          <Tab icon={<Tune sx={{ fontSize: 16 }} />} iconPosition="start" label="Protocol Designer" />
           <Tab
             icon={<CheckCircle sx={{ fontSize: 16 }} />}
             iconPosition="start"
@@ -385,7 +381,13 @@ export const ResearchLabView: React.FC = () => {
                   variant={statusFilter === 'inactive' ? 'contained' : 'outlined'}
                   color="inherit"
                   onClick={() => setStatusFilter('inactive')}
-                  sx={{ borderRadius: '8px', fontSize: '0.78rem', color: '#8b92a5', borderColor: '#232738', boxShadow: 'none !important' }}
+                  sx={{
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    color: '#8b92a5',
+                    borderColor: '#232738',
+                    boxShadow: 'none !important',
+                  }}
                 >
                   Concluded ({inactiveTrials.length})
                 </Button>
@@ -394,7 +396,13 @@ export const ResearchLabView: React.FC = () => {
                   variant={statusFilter === 'all' ? 'contained' : 'outlined'}
                   color="inherit"
                   onClick={() => setStatusFilter('all')}
-                  sx={{ borderRadius: '8px', fontSize: '0.78rem', color: '#8b92a5', borderColor: '#232738', boxShadow: 'none !important' }}
+                  sx={{
+                    borderRadius: '8px',
+                    fontSize: '0.78rem',
+                    color: '#8b92a5',
+                    borderColor: '#232738',
+                    boxShadow: 'none !important',
+                  }}
                 >
                   All ({totalTrials})
                 </Button>
@@ -422,7 +430,13 @@ export const ResearchLabView: React.FC = () => {
                   <Chip
                     label={`${filteredActiveTrials.length} Registered`}
                     size="small"
-                    sx={{ background: '#161928', color: '#818cf8', border: '1px solid #23273c', fontWeight: 600, height: 22 }}
+                    sx={{
+                      background: '#161928',
+                      color: '#818cf8',
+                      border: '1px solid #23273c',
+                      fontWeight: 600,
+                      height: 22,
+                    }}
                   />
                 </Box>
                 <Chip
@@ -443,11 +457,19 @@ export const ResearchLabView: React.FC = () => {
                 <Table>
                   <TableHead sx={{ background: '#0e1017' }}>
                     <TableRow>
-                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>DISEASE (ICD-10)</TableCell>
-                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>TRIAL HASH COMMITMENT</TableCell>
+                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
+                        DISEASE (ICD-10)
+                      </TableCell>
+                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
+                        TRIAL HASH COMMITMENT
+                      </TableCell>
                       <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>AGE WINDOW</TableCell>
-                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>MIN PATIENTS</TableCell>
-                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>ENROLLED SITES</TableCell>
+                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
+                        MIN PATIENTS
+                      </TableCell>
+                      <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
+                        ENROLLED SITES
+                      </TableCell>
                       <TableCell sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>STATUS</TableCell>
                       <TableCell align="right" sx={{ color: '#8b92a5', fontWeight: 600, fontSize: '0.74rem' }}>
                         ACTIONS
@@ -458,7 +480,7 @@ export const ResearchLabView: React.FC = () => {
                     {filteredActiveTrials.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4, color: '#6b7280' }}>
-                          No active protocols match your search. Click "Register Trial" to deploy one.
+                          No active protocols match your search. Click &quot;Register Trial&quot; to deploy one.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -478,7 +500,10 @@ export const ResearchLabView: React.FC = () => {
                                 }}
                               />
                               <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#f3f4f6', fontSize: '0.84rem' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 600, color: '#f3f4f6', fontSize: '0.84rem' }}
+                                >
                                   {trial.diseaseName}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#6b7280' }}>
@@ -603,7 +628,8 @@ export const ResearchLabView: React.FC = () => {
               Protocol Designer & Compact Circuit Studio
             </Typography>
             <Typography variant="body2" sx={{ color: '#8b92a5', fontSize: '0.84rem' }}>
-              Define the cryptographic inclusion boundaries for your clinical trial. Once registered, only hospitals whose private EHR meets these bounds can synthesize valid zero-knowledge proofs.
+              Define the cryptographic inclusion boundaries for your clinical trial. Once registered, only hospitals
+              whose private EHR meets these bounds can synthesize valid zero-knowledge proofs.
             </Typography>
           </Box>
 
@@ -672,12 +698,18 @@ export const ResearchLabView: React.FC = () => {
                   <Chip
                     label={`${ageRange[0]} – ${ageRange[1]} years old`}
                     size="small"
-                    sx={{ background: '#1a1d2b', color: '#a5b4fc', border: '1px solid #2d3348', fontWeight: 600, height: 22 }}
+                    sx={{
+                      background: '#1a1d2b',
+                      color: '#a5b4fc',
+                      border: '1px solid #2d3348',
+                      fontWeight: 600,
+                      height: 22,
+                    }}
                   />
                 </Box>
                 <Slider
                   value={ageRange}
-                  onChange={(_, val) => setAgeRange(val as number[])}
+                  onChange={(_, val) => setAgeRange(val)}
                   valueLabelDisplay="auto"
                   min={1}
                   max={95}
@@ -753,7 +785,7 @@ export const ResearchLabView: React.FC = () => {
                   lineHeight: 1.55,
                 }}
               >
-{`// Compact Trial Definition
+                {`// Compact Trial Definition
 export struct TrialInfo {
   diseaseCode: "${selectedCode}",
   minAge: ${ageRange[0]},
@@ -820,7 +852,9 @@ trialIdHash = persistentHash(
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: '#8b92a5' }}>
+                      <TableCell
+                        sx={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem', color: '#8b92a5' }}
+                      >
                         {trial.trialIdHex.substring(0, 14)}...
                       </TableCell>
                       <TableCell>
@@ -965,12 +999,18 @@ trialIdHash = persistentHash(
                   <Chip
                     label={`${ageRange[0]} – ${ageRange[1]} years old`}
                     size="small"
-                    sx={{ background: '#1a1d2b', color: '#a5b4fc', border: '1px solid #2d3348', fontWeight: 600, height: 22 }}
+                    sx={{
+                      background: '#1a1d2b',
+                      color: '#a5b4fc',
+                      border: '1px solid #2d3348',
+                      fontWeight: 600,
+                      height: 22,
+                    }}
                   />
                 </Box>
                 <Slider
                   value={ageRange}
-                  onChange={(_, val) => setAgeRange(val as number[])}
+                  onChange={(_, val) => setAgeRange(val)}
                   valueLabelDisplay="auto"
                   min={1}
                   max={95}
@@ -1027,7 +1067,7 @@ trialIdHash = persistentHash(
                   lineHeight: 1.55,
                 }}
               >
-{`// Compact Trial Definition
+                {`// Compact Trial Definition
 export struct TrialInfo {
   diseaseCode: "${selectedCode}",
   minAge: ${ageRange[0]},

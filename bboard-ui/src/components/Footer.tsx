@@ -1,12 +1,6 @@
 import React from 'react';
 import { Box, Typography, Container, Chip, Tooltip } from '@mui/material';
-import {
-  Shield,
-  CheckCircle,
-  Speed,
-  Lock,
-  Bolt,
-} from '@mui/icons-material';
+import { Shield, CheckCircle, Speed, Lock, Bolt } from '@mui/icons-material';
 import { useMembrane } from '../contexts/MembraneContext';
 
 export const Footer: React.FC = () => {
@@ -48,7 +42,10 @@ export const Footer: React.FC = () => {
             >
               <Shield sx={{ fontSize: 14, color: '#ffffff' }} />
             </Box>
-            <Typography variant="body2" sx={{ fontWeight: 700, letterSpacing: '-0.01em', color: '#f3f4f6', fontSize: '0.82rem' }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 700, letterSpacing: '-0.01em', color: '#f3f4f6', fontSize: '0.82rem' }}
+            >
               MEMBRANE PROTOCOL
             </Typography>
             <Typography variant="caption" sx={{ color: '#6b7280' }}>

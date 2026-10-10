@@ -13,21 +13,10 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import {
-  CheckCircle,
-  Error,
-  Shield,
-  ContentCopy,
-  Terminal,
-} from '@mui/icons-material';
+import { CheckCircle, Error, Shield, ContentCopy, Terminal } from '@mui/icons-material';
 import { useMembrane } from '../contexts/MembraneContext';
 
-const STEPS = [
-  'Witness Private State',
-  'ZK Proof Server (:6300)',
-  'Lace Wallet Balancing',
-  'Midnight Node Ledger',
-];
+const STEPS = ['Witness Private State', 'ZK Proof Server (:6300)', 'Lace Wallet Balancing', 'Midnight Node Ledger'];
 
 export const ZkProgressModal: React.FC = () => {
   const { zkStatus, resetZkStatus } = useMembrane();
@@ -75,10 +64,7 @@ export const ZkProgressModal: React.FC = () => {
         '⛓️ [2.6s] Awaiting consensus inclusion in next block...',
       ]);
     } else if (zkStatus.step === 'confirmed') {
-      setLogLines((prev) => [
-        ...prev,
-        '🎉 [3.2s] Transaction confirmed and committed to Midnight Ledger!',
-      ]);
+      setLogLines((prev) => [...prev, '🎉 [3.2s] Transaction confirmed and committed to Midnight Ledger!']);
     } else if (zkStatus.step === 'idle') {
       setLogLines([]);
     }
@@ -102,11 +88,7 @@ export const ZkProgressModal: React.FC = () => {
         paper: {
           sx: {
             background: '#11131a',
-            border: isComplete
-              ? '1px solid #163826'
-              : isFailed
-              ? '1px solid #3d1b1f'
-              : '1px solid #232738',
+            border: isComplete ? '1px solid #163826' : isFailed ? '1px solid #3d1b1f' : '1px solid #232738',
             boxShadow: 'none !important',
             borderRadius: '12px',
             p: 1.5,
@@ -175,14 +157,13 @@ export const ZkProgressModal: React.FC = () => {
         </Box>
 
         <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: '-0.015em', mb: 0.8, color: '#f3f4f6' }}>
-          {isComplete
-            ? 'ZK Transaction Confirmed'
-            : isFailed
-            ? 'Transaction Failed'
-            : 'Zero-Knowledge Proof Execution'}
+          {isComplete ? 'ZK Transaction Confirmed' : isFailed ? 'Transaction Failed' : 'Zero-Knowledge Proof Execution'}
         </Typography>
 
-        <Typography variant="body2" sx={{ color: '#8b92a5', mb: 3, px: 2, minHeight: 38, lineHeight: 1.5, fontSize: '0.82rem' }}>
+        <Typography
+          variant="body2"
+          sx={{ color: '#8b92a5', mb: 3, px: 2, minHeight: 38, lineHeight: 1.5, fontSize: '0.82rem' }}
+        >
           {zkStatus.message}
         </Typography>
 
@@ -226,7 +207,16 @@ export const ZkProgressModal: React.FC = () => {
             textAlign: 'left',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 0.8, borderBottom: '1px solid #161824', pb: 0.6 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.8,
+              mb: 0.8,
+              borderBottom: '1px solid #161824',
+              pb: 0.6,
+            }}
+          >
             <Terminal sx={{ fontSize: 14, color: '#38bdf8' }} />
             <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, letterSpacing: '0.04em' }}>
               MIDNIGHT ZK PROOF LOG CONSOLE
@@ -243,7 +233,10 @@ export const ZkProgressModal: React.FC = () => {
             }}
           >
             {logLines.map((line, idx) => (
-              <Box key={idx} sx={{ color: idx === logLines.length - 1 ? (isComplete ? '#34d399' : '#818cf8') : '#8b92a5' }}>
+              <Box
+                key={idx}
+                sx={{ color: idx === logLines.length - 1 ? (isComplete ? '#34d399' : '#818cf8') : '#8b92a5' }}
+              >
                 {line}
               </Box>
             ))}
@@ -265,7 +258,10 @@ export const ZkProgressModal: React.FC = () => {
             }}
           >
             <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
-              <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', fontWeight: 600, fontSize: '0.68rem' }}>
+              <Typography
+                variant="caption"
+                sx={{ color: '#6b7280', display: 'block', fontWeight: 600, fontSize: '0.68rem' }}
+              >
                 MIDNIGHT TRANSACTION HASH
               </Typography>
               <Typography

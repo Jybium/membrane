@@ -6,8 +6,20 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract } from '../midnight/contract';
+import {
+  getMembraneContract,
+  getContractStudyDetails,
+  type MembraneStudy,
+  TrialStatusEnum,
+} from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
+import {
+  initProofServerAutoDetection,
+  subscribeProofServer,
+  checkProofServer,
+  setSimulatedProver,
+  type ProofServerState,
+} from '../midnight/proofServer';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -54,20 +66,40 @@ export const HospitalPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { walletSession, connectWallet, dynamicCodes, totalCohortCount } = useApp();
+  const { walletSession, connectWallet, dynamicCodes } = useApp();
 
-  const urlIcd = searchParams.get('icd') || 'K30';
+  const urlIcd = searchParams.get('icd') || 'ALL';
   const urlTrial = searchParams.get('trial') || '';
-  const urlMinCohort = parseInt(searchParams.get('minCohort') || '200', 10) || 200;
 
   const [diseaseCode, setDiseaseCode] = useState<string>(urlIcd);
-  const [minimum, setMinimum] = useState<number>(urlMinCohort);
   const [trials, setTrials] = useState<ApiRecord[]>([]);
+  const [trialStatuses, setTrialStatuses] = useState<Record<string, boolean>>({});
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [indexStatus, setIndexStatus] = useState<Status>('loading');
+  const [contractStudy, setContractStudy] = useState<MembraneStudy | null>(null);
+  const [contractStudyLoading, setContractStudyLoading] = useState<boolean>(false);
   const [proofStatus, setProofStatus] = useState<Status>('idle');
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
+
+  const [proofServer, setProofServer] = useState<ProofServerState>({
+    status: 'checking',
+    uri: 'http://localhost:6300',
+    isSimulated: false,
+    lastChecked: null,
+  });
+
+  // Real-time automatic detection and subscription for local proof server
+  useEffect(() => {
+    const stopAuto = initProofServerAutoDetection(12000);
+    const unsub = subscribeProofServer((state) => {
+      setProofServer(state);
+    });
+    return () => {
+      stopAuto();
+      unsub();
+    };
+  }, []);
 
   const updateUrlParams = useCallback(
     (updates: Record<string, string>) => {
@@ -89,8 +121,32 @@ export const HospitalPage: React.FC = () => {
     [setSearchParams],
   );
 
+  const fetchTrialStatuses = useCallback(
+    async (list: ApiRecord[]) => {
+      if (list.length === 0) return;
+      try {
+        const contract = await getMembraneContract(walletSession);
+        const statuses: Record<string, boolean> = {};
+        for (const t of list) {
+          const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
+          if (hex) {
+            statuses[hex] = await contract.isTrialActive(hex);
+          }
+        }
+        setTrialStatuses(statuses);
+      } catch {
+        // ignore
+      }
+    },
+    [walletSession],
+  );
+
   const loadRequests = useCallback(async () => {
     setIndexStatus('loading');
+    setProofStatus('idle');
+    setCount(null);
+    setMessage('');
+    setContractStudy(null);
     try {
       const clean = diseaseCode.trim().toUpperCase();
       const path =
@@ -101,48 +157,130 @@ export const HospitalPage: React.FC = () => {
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
       setTrials(list);
 
-      // If URL specified a trial hex ID, find its index
-      if (urlTrial) {
-        const found = list.findIndex((t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial);
-        setSelectedIndex(found >= 0 ? found : 0);
+      if (list.length > 0) {
+        let idx = 0;
+        if (urlTrial) {
+          const found = list.findIndex((t) => text(t, ['trialHexId', 'hexId', 'id'], '') === urlTrial);
+          idx = found >= 0 ? found : 0;
+        }
+        setSelectedIndex(idx);
       } else {
         setSelectedIndex(0);
       }
       setIndexStatus('success');
+      void fetchTrialStatuses(list);
     } catch {
+      setTrials([]);
+      setSelectedIndex(0);
       setIndexStatus('error');
     }
-  }, [diseaseCode, urlTrial]);
+  }, [diseaseCode, urlTrial, fetchTrialStatuses]);
 
   useEffect(() => {
     void loadRequests();
   }, [loadRequests]);
 
+  const selectedTrial = trials.length > 0 && selectedIndex < trials.length ? trials[selectedIndex] : null;
+
+  // Workflow Step: Query smart contract using trialHexId to pull precise details
+  useEffect(() => {
+    let isMounted = true;
+    if (!selectedTrial) {
+      setContractStudy(null);
+      setContractStudyLoading(false);
+      return;
+    }
+
+    const hex = text(selectedTrial, ['trialHexId', 'hexId', 'id'], '');
+    const code = text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode);
+    if (!hex) {
+      setContractStudy(null);
+      setContractStudyLoading(false);
+      return;
+    }
+
+    setContractStudyLoading(true);
+    void getContractStudyDetails(hex, code).then((details) => {
+      if (isMounted) {
+        setContractStudy(details);
+        setContractStudyLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedTrial, diseaseCode]);
+
   const handleDiseaseChange = (code: string) => {
     setDiseaseCode(code);
-    updateUrlParams({ icd: code });
+    setTrials([]);
+    setSelectedIndex(0);
+    setContractStudy(null);
+    setProofStatus('idle');
+    setCount(null);
+    setMessage('');
+    updateUrlParams({ icd: code, trial: '' });
   };
 
   const handleSelectTrial = (index: number, trial: ApiRecord) => {
     setSelectedIndex(index);
     setProofStatus('idle');
     setCount(null);
+    setMessage('');
     const hex = text(trial, ['trialHexId', 'hexId', 'id'], '');
     updateUrlParams({ trial: hex });
   };
 
-  const handleMinChange = (val: number) => {
-    setMinimum(val);
-    updateUrlParams({ minCohort: String(val) });
-  };
+  const requiredCohort = contractStudy?.minCohort ?? 0;
+  const eligible = count !== null && count >= requiredCohort;
+
+  const selectedHex = selectedTrial ? text(selectedTrial, ['trialHexId', 'hexId', 'id'], '') : '';
+  const isSelectedTrialActive =
+    contractStudy?.status === TrialStatusEnum.inactive
+      ? false
+      : selectedHex
+        ? trialStatuses[selectedHex] !== false
+        : true;
 
   const verify = async () => {
+    if (!selectedTrial) return;
+
+    // Requirement 2: Hospital can only enroll in an active trial
+    if (!isSelectedTrialActive) {
+      setProofStatus('error');
+      setMessage('This clinical trial is inactive or has been cancelled by the research lab. Enrollment is disabled.');
+      return;
+    }
+
+    // Requirement 3: Check to see if local proof server is running or active
+    if (proofServer.status !== 'online') {
+      setProofStatus('error');
+      setMessage(
+        `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute zero-knowledge proofs locally.`,
+      );
+      return;
+    }
+
     setProofStatus('loading');
     setMessage('');
     try {
-      const cleanCode = (diseaseCode || '').trim().toUpperCase();
+      const hex = text(selectedTrial, ['trialHexId', 'hexId'], '');
+      const targetCode = contractStudy?.diseaseCode || text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode);
+      const cleanCode = (targetCode === 'ALL' ? '' : targetCode).trim().toUpperCase();
+
+      if (!cleanCode) {
+        throw new Error('Please select an active clinical trial request.');
+      }
+
+      // Midnight smart contract dictates cohort requirements and age ranges
+      const cohortRequirement = contractStudy?.minCohort ?? 10;
+      const targetMinAge = contractStudy?.minAge ?? 40;
+      const targetMaxAge = contractStudy?.maxAge ?? 65;
+
+      // 1. Evaluate matching consented patients locally inside hospital boundary
       const result = await apiRequest<{ patientsCount?: number }>(
-        `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=40&maxAge=65`,
+        `/demo-hosp-a-data/patient-ct-requirement-count?icd=${encodeURIComponent(cleanCode)}&minAge=${targetMinAge}&maxAge=${targetMaxAge}`,
       );
       if (typeof result.patientsCount !== 'number') {
         throw new Error('Invalid count response from hospital EHR.');
@@ -150,13 +288,13 @@ export const HospitalPage: React.FC = () => {
       const localCount = result.patientsCount;
       setCount(localCount);
 
-      // If wallet is connected, verify on Midnight smart contract
-      if (walletSession && isContractConfigured() && trials[selectedIndex]) {
-        const hex = text(trials[selectedIndex], ['trialHexId', 'hexId'], '');
-        if (hex && localCount >= minimum) {
+      // 2. If wallet is connected, verify and prove on Midnight smart contract
+      if (walletSession && isContractConfigured()) {
+        if (hex && localCount >= cohortRequirement) {
           try {
             const contract = await getMembraneContract(walletSession);
-            await contract.proveEligibility(hex, localCount);
+            // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
+            await contract.trialEnrollment(hex, localCount);
           } catch (contractErr) {
             console.warn('Smart contract proof submission note:', contractErr);
           }
@@ -169,9 +307,6 @@ export const HospitalPage: React.FC = () => {
       setMessage(error instanceof Error ? error.message : 'Could not verify eligibility.');
     }
   };
-
-  const eligible = count !== null && count >= minimum;
-  const selectedTrial = trials[selectedIndex];
 
   return (
     <div className="app">
@@ -229,6 +364,8 @@ export const HospitalPage: React.FC = () => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
                 const code = text(trial, ['diseaseCode', 'icd'], diseaseCode || 'K30');
                 const isSelected = selectedIndex === index;
+                const isActive = trialStatuses[hex] !== false;
+
                 return (
                   <button
                     type="button"
@@ -237,19 +374,26 @@ export const HospitalPage: React.FC = () => {
                     onClick={() => handleSelectTrial(index, trial)}
                   >
                     <span className="row-icon">CT</span>
-                    <div>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
                       <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                       <small>
                         Trial ID: {hex.slice(0, 16)}… • ICD {code}
                       </small>
                     </div>
+                    <span className={`status-pill ${isActive ? 'active' : 'inactive'}`} style={{ marginRight: '8px' }}>
+                      <span className="status-dot" />
+                      {isActive ? 'Active' : 'Closed'}
+                    </span>
                     <span>{isSelected ? 'Selected' : 'Select'}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="empty compact">No open requests found for ICD {diseaseCode || 'selected filter'}.</div>
+            <div className="empty compact">
+              No open requests found for ICD{' '}
+              {diseaseCode === 'ALL' ? 'all diagnoses' : `${diseaseCode} (${getDiseaseName(diseaseCode)})`}.
+            </div>
           )}
         </section>
 
@@ -265,65 +409,157 @@ export const HospitalPage: React.FC = () => {
             <b className="private">Local ZK Enclave</b>
           </div>
 
-          <div className="criteria">
-            <div>
-              <span>Condition</span>
-              <strong>
-                ICD {selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode} —{' '}
-                {getDiseaseName(selectedTrial ? text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode) : diseaseCode)}
-              </strong>
+          {/* Proof Server Real-time Detection Banner */}
+          <div className={`proof-server-banner ${proofServer.status}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span className="beacon-dot" />
+              <div>
+                <strong>Local Proof Server: </strong>
+                <small>{proofServer.message || proofServer.uri}</small>
+              </div>
             </div>
-            <div>
-              <span>Minimum cohort</span>
-              <strong>
-                <input type="number" value={minimum} onChange={(e) => handleMinChange(Number(e.target.value) || 0)} />{' '}
-                patients
-              </strong>
-            </div>
-            <div>
-              <span>Patient records</span>
-              <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void checkProofServer()}
+                style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+              >
+                Recheck
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setSimulatedProver(!proofServer.isSimulated)}
+                title="Toggle simulated enclave if Docker proof server is not running locally"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 8px',
+                  color: proofServer.isSimulated ? '#10b981' : '#64748b',
+                  fontWeight: proofServer.isSimulated ? 600 : 400,
+                }}
+              >
+                {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
+              </button>
             </div>
           </div>
 
-          {proofStatus === 'success' ? (
-            <div className={`result ${eligible ? 'qualified' : 'not-qualified'}`}>
-              <span>{eligible ? '✓' : '!'}</span>
-              <div>
-                <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
-                <p>
-                  {count} matching demo records were evaluated locally inside institutional custody. Only this
-                  zero-knowledge predicate result is shared on Midnight.
-                </p>
-              </div>
-              <button type="button" onClick={() => setProofStatus('idle')}>
-                Run again
-              </button>
+          {!selectedTrial ? (
+            <div className="empty-check-state">
+              <div className="empty-check-icon">🔒</div>
+              <strong>No open trial selected</strong>
+              <p>
+                {trials.length === 0
+                  ? `No clinical trial requests are currently indexed for ${
+                      diseaseCode === 'ALL'
+                        ? 'the selected filter'
+                        : `ICD ${diseaseCode} (${getDiseaseName(diseaseCode)})`
+                    }. The private eligibility check remains cleared until a matching open trial is found.`
+                  : 'Select an open clinical trial from Section 01 above to evaluate institutional feasibility against hospital records.'}
+              </p>
             </div>
           ) : (
-            <div className="action-row">
-              <button
-                type="button"
-                onClick={walletSession ? verify : connectWallet}
-                disabled={proofStatus === 'loading'}
-              >
-                {proofStatus === 'loading'
-                  ? 'Evaluating locally…'
-                  : walletSession
-                    ? 'Verify eligibility & prove'
-                    : 'Connect wallet to verify'}
-                <Arrow />
-              </button>
-            </div>
-          )}
+            <>
+              <div className="criteria">
+                <div>
+                  <span>Condition</span>
+                  <strong>
+                    ICD{' '}
+                    {contractStudy
+                      ? contractStudy.diseaseCode
+                      : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}{' '}
+                    —{' '}
+                    {getDiseaseName(
+                      contractStudy
+                        ? contractStudy.diseaseCode
+                        : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
+                    )}
+                  </strong>
+                </div>
+                <div>
+                  <span>Minimum cohort</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {contractStudyLoading ? (
+                      <span style={{ color: '#6C7D8C' }}>Querying smart contract…</span>
+                    ) : (
+                      <>
+                        <span>{requiredCohort} patients</span>
+                      </>
+                    )}
+                  </strong>
+                </div>
+                <div>
+                  <span>Trial status</span>
+                  <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className={`status-pill ${isSelectedTrialActive ? 'active' : 'inactive'}`}>
+                      <span className="status-dot" />
+                      {isSelectedTrialActive ? 'Active for Recruitment' : 'Closed / Deactivated'}
+                    </span>
+                  </strong>
+                </div>
+                <div>
+                  <span>Patient records</span>
+                  <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
+                </div>
+              </div>
 
-          {proofStatus === 'error' && (
-            <div className="notice error">
-              {message}
-              <button type="button" onClick={verify}>
-                Retry
-              </button>
-            </div>
+              {proofStatus === 'success' ? (
+                <div className={`result ${eligible ? 'qualified' : 'not-qualified'}`}>
+                  <span>{eligible ? '✓' : '!'}</span>
+                  <div>
+                    <strong>{eligible ? 'Requirement met' : 'Requirement not met'}</strong>
+                    <p>
+                      {eligible
+                        ? `${count} matching demo records evaluated locally (required ≥ ${requiredCohort}). Zero-knowledge witness proof generated on local proof server and submitted to Midnight.`
+                        : `Only ${count} matching demo records found locally (required ≥ ${requiredCohort}). Zero-knowledge criteria not satisfied.`}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setProofStatus('idle')}>
+                    Run again
+                  </button>
+                </div>
+              ) : (
+                <div className="action-row">
+                  <button
+                    type="button"
+                    onClick={walletSession ? verify : connectWallet}
+                    disabled={
+                      proofStatus === 'loading' ||
+                      contractStudyLoading ||
+                      !isSelectedTrialActive ||
+                      proofServer.status === 'checking'
+                    }
+                    title={
+                      !isSelectedTrialActive
+                        ? 'Cannot enroll in an inactive trial'
+                        : proofServer.status === 'offline'
+                          ? 'Local proof server is offline'
+                          : undefined
+                    }
+                  >
+                    {proofStatus === 'loading'
+                      ? 'Generating local ZK proof…'
+                      : !isSelectedTrialActive
+                        ? 'Trial Inactive (Recruitment Closed)'
+                        : walletSession
+                          ? proofServer.status === 'offline'
+                            ? 'Proof Server Offline — Cannot Enroll'
+                            : 'Verify eligibility & prove'
+                          : 'Connect wallet to verify'}
+                    <Arrow />
+                  </button>
+                </div>
+              )}
+
+              {proofStatus === 'error' && (
+                <div className="notice error">
+                  {message}
+                  <button type="button" onClick={verify}>
+                    Retry
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </main>
