@@ -6,7 +6,7 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract, type StudyCriteria } from '../midnight/contract';
+import { getMembraneContract } from '../midnight/contract';
 import { isContractConfigured } from '../midnight/config';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
@@ -98,22 +98,25 @@ export const ResearchLabPage: React.FC = () => {
     [setSearchParams],
   );
 
-  const fetchTrialStatuses = useCallback(async (list: ApiRecord[]) => {
-    if (list.length === 0) return;
-    try {
-      const contract = await getMembraneContract(walletSession);
-      const statuses: Record<string, boolean> = {};
-      for (const t of list) {
-        const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
-        if (hex) {
-          statuses[hex] = await contract.isTrialActive(hex);
+  const fetchTrialStatuses = useCallback(
+    async (list: ApiRecord[]) => {
+      if (list.length === 0) return;
+      try {
+        const contract = await getMembraneContract(walletSession);
+        const statuses: Record<string, boolean> = {};
+        for (const t of list) {
+          const hex = text(t, ['trialHexId', 'hexId', 'id'], '');
+          if (hex) {
+            statuses[hex] = await contract.isTrialActive(hex);
+          }
         }
+        setTrialStatuses(statuses);
+      } catch {
+        // ignore
       }
-      setTrialStatuses(statuses);
-    } catch {
-      // ignore
-    }
-  }, [walletSession]);
+    },
+    [walletSession],
+  );
 
   const loadTrials = useCallback(async () => {
     setStatus('loading');
@@ -144,7 +147,9 @@ export const ResearchLabPage: React.FC = () => {
       const contract = await getMembraneContract(walletSession);
       await contract.cancelTrial(hex);
       setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
-      setMessage(`Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`);
+      setMessage(
+        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`,
+      );
       setStatus('success');
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Could not deactivate trial.');
@@ -200,12 +205,7 @@ export const ResearchLabPage: React.FC = () => {
       if (walletSession && isContractConfigured()) {
         try {
           const contract = await getMembraneContract(walletSession);
-          const result = await contract.createTrial(
-            diseaseCode,
-            minAgeNum,
-            maxAgeNum,
-            minCohortNum,
-          );
+          const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
           hexId = result.trialHexId;
         } catch (contractErr) {
           console.warn('Smart contract publish fallback:', contractErr);

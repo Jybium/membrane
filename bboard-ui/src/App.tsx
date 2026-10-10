@@ -2,13 +2,7 @@ import './App.css';
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
-import {
-  LandingPage,
-  ResearchLabPage,
-  HospitalPage,
-  EhrVaultPage,
-  NetworkAuditorPage,
-} from './pages';
+import { LandingPage, ResearchLabPage, HospitalPage, EhrVaultPage, NetworkAuditorPage } from './pages';
 
 export default function App() {
   return (

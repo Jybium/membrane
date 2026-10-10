@@ -5,10 +5,7 @@ import {
   isWalletInstalled,
   type WalletSession,
 } from '../midnight/wallet';
-import {
-  fetchDynamicHospitalCodes,
-  type DynamicIcdOption,
-} from '../config/icdRegistry';
+import { fetchDynamicHospitalCodes, type DynamicIcdOption } from '../config/icdRegistry';
 
 interface AppContextValue {
   walletSession: WalletSession | null;

@@ -8,13 +8,7 @@ export interface SkeletonProps {
   style?: React.CSSProperties;
 }
 
-export const Skeleton: React.FC<SkeletonProps> = ({
-  width,
-  height,
-  borderRadius,
-  className = '',
-  style,
-}) => {
+export const Skeleton: React.FC<SkeletonProps> = ({ width, height, borderRadius, className = '', style }) => {
   return (
     <div
       className={`skeleton ${className}`}

@@ -4,6 +4,18 @@ import reactPlugin from 'eslint-plugin-react';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
 const config = tseslint.config(
+  {
+    ignores: [
+      'dist/**',
+      'src/components/Board.tsx',
+      'src/components/Board.EmptyCardContent.tsx',
+      'src/components/TextPromptDialog.tsx',
+      'src/components/Layout/**',
+      'src/contexts/BrowserDeployedBoardManager.ts',
+      'src/contexts/DeployedBoardContext.tsx',
+      'src/hooks/useDeployedBoardContext.ts',
+    ],
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   reactPlugin.configs.flat.recommended,
@@ -16,9 +28,13 @@ const config = tseslint.config(
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/promise-function-async': 'off',
       '@typescript-eslint/no-redeclare': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
     settings: {
       react: {

@@ -110,22 +110,24 @@ export const theme = createTheme({
           fontWeight: 600,
           boxShadow: 'none !important',
           transition: 'all 0.15s ease',
-          ...(ownerState.variant === 'contained' && ownerState.color === 'primary' && {
-            backgroundColor: '#4E93B4',
-            color: '#F6F3EC',
-            '&:hover': {
-              backgroundColor: '#3C7C9C',
-              boxShadow: 'none !important',
-            },
-          }),
-          ...(ownerState.variant === 'contained' && ownerState.color === 'success' && {
-            backgroundColor: '#4E93B4',
-            color: '#F6F3EC',
-            '&:hover': {
-              backgroundColor: '#3C7C9C',
-              boxShadow: 'none !important',
-            },
-          }),
+          ...(ownerState.variant === 'contained' &&
+            ownerState.color === 'primary' && {
+              backgroundColor: '#4E93B4',
+              color: '#F6F3EC',
+              '&:hover': {
+                backgroundColor: '#3C7C9C',
+                boxShadow: 'none !important',
+              },
+            }),
+          ...(ownerState.variant === 'contained' &&
+            ownerState.color === 'success' && {
+              backgroundColor: '#4E93B4',
+              color: '#F6F3EC',
+              '&:hover': {
+                backgroundColor: '#3C7C9C',
+                boxShadow: 'none !important',
+              },
+            }),
           ...(ownerState.variant === 'outlined' && {
             borderColor: '#2B4257',
             color: '#F6F3EC',

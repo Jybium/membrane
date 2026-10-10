@@ -81,7 +81,7 @@ export const KNOWN_ONCHAIN_STUDIES: Record<string, Partial<TrialInfo>> = {
     enrolledCount: 0,
     trialIdHash: '3ba8fcc0e9e8730fbe2b707952b7f224419a5224da35b22446dc0c0935e519dc',
   },
-  'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4': {
+  a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4: {
     diseaseCode: 'K30',
     minPatientSampleCount: 15,
     minAge: 35,
@@ -91,7 +91,7 @@ export const KNOWN_ONCHAIN_STUDIES: Record<string, Partial<TrialInfo>> = {
     trialIdHash: 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4',
   },
   // J45 trial from API index
-  'j45test_1791564680608': {
+  j45test_1791564680608: {
     diseaseCode: 'J45',
     minPatientSampleCount: 8,
     minAge: 18,
@@ -201,7 +201,8 @@ export async function getContractStudyDetails(
         maxAge: val.maxAge || 65,
         status: val.status ?? TrialStatusEnum.active,
         enrolledCount: val.enrolledCount || 0,
-        researchLabIdHash: val.researchLabIdHash || '0x0000000000000000000000000000000000000000000000000000000000000001',
+        researchLabIdHash:
+          val.researchLabIdHash || '0x0000000000000000000000000000000000000000000000000000000000000001',
         trialIdHash: trialHexId,
         createdAt: new Date().toISOString().split('T')[0],
       };
@@ -235,10 +236,7 @@ export interface MembraneContractApi {
 
   cancelTrial: (trialHexId?: string) => Promise<{ txId: string; trialHexId: string }>;
 
-  trialEnrollment: (
-    trialHexId: string,
-    hospitalPatientsAggregate: number,
-  ) => Promise<{ txId: string }>;
+  trialEnrollment: (trialHexId: string, hospitalPatientsAggregate: number) => Promise<{ txId: string }>;
 
   isTrialActive: (trialHexId: string) => Promise<boolean>;
 
@@ -374,10 +372,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
      * Enforces getHospitalPatientsAggregate() >= minPatientSampleCount
      * and enrolls the hospital.
      */
-    async trialEnrollment(
-      trialHexId: string,
-      hospitalPatientsAggregate: number,
-    ): Promise<{ txId: string }> {
+    async trialEnrollment(trialHexId: string, hospitalPatientsAggregate: number): Promise<{ txId: string }> {
       await new Promise((resolve) => setTimeout(resolve, 1400));
 
       const study = await getContractStudyDetails(trialHexId);
@@ -391,7 +386,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
 
       if (hospitalPatientsAggregate < study.minPatientSampleCount) {
         throw new Error(
-          `Hospital does not meet the minimum patient sample count (${hospitalPatientsAggregate} < ${study.minPatientSampleCount})`
+          `Hospital does not meet the minimum patient sample count (${hospitalPatientsAggregate} < ${study.minPatientSampleCount})`,
         );
       }
 
@@ -399,7 +394,8 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       const enrollments = getEnrollmentsStore();
       const enrolledSet = enrollments[study.trialIdHash] || [];
       const hospitalHash =
-        session?.address || '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+        session?.address ||
+        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
 
       if (!enrolledSet.includes(hospitalHash)) {
         enrolledSet.push(hospitalHash);
@@ -424,6 +420,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
      * circuit isTrialActive(trialIdHash: Bytes<32>): Boolean
      */
     async isTrialActive(trialHexId: string): Promise<boolean> {
+      await Promise.resolve();
       const inactive = getInactiveTrialsStore();
       for (const k of Object.keys(inactive)) {
         if (k === trialHexId || k.startsWith(trialHexId) || trialHexId.startsWith(k)) {
@@ -451,6 +448,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
      * circuit inactiveTrialDetail(trialIdHash: Bytes<32>): TrialInfo
      */
     async inactiveTrialDetail(trialHexId: string): Promise<TrialInfo | null> {
+      await Promise.resolve();
       const inactive = getInactiveTrialsStore();
       for (const [k, v] of Object.entries(inactive)) {
         if (k === trialHexId || k.startsWith(trialHexId) || trialHexId.startsWith(k)) {
@@ -464,6 +462,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
      * circuit validateTrialEnrollment(trialIdHash: Bytes<32>): Boolean
      */
     async validateTrialEnrollment(trialHexId: string): Promise<boolean> {
+      await Promise.resolve();
       const enrollments = getEnrollmentsStore();
       const enrolled = enrollments[trialHexId] || [];
       return enrolled.length > 0;
@@ -471,13 +470,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
 
     // Backwards-compatible aliases
     async createStudy(trialHexId: string, criteria: StudyCriteria): Promise<{ txId: string; trialHexId: string }> {
-      return this.createTrial(
-        criteria.diseaseCode,
-        criteria.minAge,
-        criteria.maxAge,
-        criteria.minCohort,
-        trialHexId,
-      );
+      return this.createTrial(criteria.diseaseCode, criteria.minAge, criteria.maxAge, criteria.minCohort, trialHexId);
     },
 
     async getStudy(trialHexId: string): Promise<MembraneStudy | null> {

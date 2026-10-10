@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { MembraneBackendService } from '../services/membraneBackendService';
+import { connectWallet as connectMidnightWallet } from '../midnight/wallet';
 
 export type UserRole = 'research-lab' | 'hospital' | 'ehr-database' | 'ledger-explorer';
 
@@ -95,27 +96,15 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Connect to Midnight Lace Wallet
   const connectWallet = useCallback(async () => {
     try {
-      if (typeof window !== 'undefined' && (window as any).midnight) {
-        const wallets = Object.values((window as any).midnight) as any[];
-        const lace = wallets.find((w: any) => w.apiVersion);
-        if (lace) {
-          const connected = await lace.connect(networkId);
-          const state = await connected.getShieldedAddresses();
-          const addr = state.shieldedCoinPublicKey;
-          setWalletAddress(addr);
-          setIsWalletConnected(true);
-          return;
-        }
-      }
-      const mockAddr = 'mn_shielded1q8v639420j88x0kltz99482hsa772km983ns002847a98';
-      setWalletAddress(mockAddr);
+      const session = await connectMidnightWallet();
+      setWalletAddress(session.address);
       setIsWalletConnected(true);
     } catch {
       const mockAddr = 'mn_shielded1q8v639420j88x0kltz99482hsa772km983ns002847a98';
       setWalletAddress(mockAddr);
       setIsWalletConnected(true);
     }
-  }, [networkId]);
+  }, []);
 
   // Load trials from live backend indexer
   const refreshTrials = useCallback(async () => {
@@ -161,29 +150,35 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         message: 'Generating zero-knowledge circuit proof for createTrial circuit...',
       });
 
-      await new Promise(r => setTimeout(r, 1400));
+      await new Promise((r) => setTimeout(r, 1400));
 
       setZkStatus({
         step: 'signing',
         message: 'Balancing transaction recipe & generating unshielded dust payment...',
       });
 
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
 
       setZkStatus({
         step: 'submitting',
         message: 'Submitting zero-knowledge transaction to Midnight node (:9944)...',
       });
 
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise((r) => setTimeout(r, 1200));
 
       // Generate realistic trial hash
       const randomHex = Array.from({ length: 32 }, () =>
-        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+        Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, '0'),
       ).join('');
-      const txHash = '0x' + Array.from({ length: 32 }, () =>
-        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-      ).join('');
+      const txHash =
+        '0x' +
+        Array.from({ length: 32 }, () =>
+          Math.floor(Math.random() * 256)
+            .toString(16)
+            .padStart(2, '0'),
+        ).join('');
 
       const newTrial: TrialItem = {
         trialIdHex: randomHex,
@@ -209,7 +204,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (err) {
         console.error('Failed to index clinical trial in API database:', err);
         throw new Error(
-          `On-chain trial was submitted, but failed to index on the API database: ${err instanceof Error ? err.message : String(err)}`
+          `On-chain trial was submitted, but failed to index on the API database: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
 
@@ -224,7 +219,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return { trialIdHex: randomHex, txHash };
     },
-    [refreshTrials]
+    [refreshTrials],
   );
 
   // 2. Cancel Trial Action
@@ -234,25 +229,29 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       message: 'Generating zero-knowledge circuit proof for cancelTrial (ownership check)...',
     });
 
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 1200));
 
     setZkStatus({
       step: 'submitting',
       message: 'Submitting trial cancellation to Midnight ledger...',
     });
 
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
-    const txHash = '0x' + Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-    ).join('');
+    const txHash =
+      '0x' +
+      Array.from({ length: 32 }, () =>
+        Math.floor(Math.random() * 256)
+          .toString(16)
+          .padStart(2, '0'),
+      ).join('');
 
-    setActiveTrials(prev => {
-      const target = prev.find(t => t.trialIdHex === trialIdHex);
+    setActiveTrials((prev) => {
+      const target = prev.find((t) => t.trialIdHex === trialIdHex);
       if (target) {
-        setInactiveTrials(inact => [{ ...target, status: 'inactive' }, ...inact]);
+        setInactiveTrials((inact) => [{ ...target, status: 'inactive' }, ...inact]);
       }
-      return prev.filter(t => t.trialIdHex !== trialIdHex);
+      return prev.filter((t) => t.trialIdHex !== trialIdHex);
     });
 
     setZkStatus({
@@ -272,33 +271,35 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         message: `Evaluating EHR witness (Sample Count: ${patientAggregate}). Generating ZK Proof that count >= threshold...`,
       });
 
-      await new Promise(r => setTimeout(r, 1600));
+      await new Promise((r) => setTimeout(r, 1600));
 
       setZkStatus({
         step: 'signing',
         message: 'Signing hospital identity commitment in Midnight Lace Wallet...',
       });
 
-      await new Promise(r => setTimeout(r, 1100));
+      await new Promise((r) => setTimeout(r, 1100));
 
       setZkStatus({
         step: 'submitting',
         message: 'Transmitting proof to Midnight blockchain. No patient health information leaves hospital premises.',
       });
 
-      await new Promise(r => setTimeout(r, 1300));
+      await new Promise((r) => setTimeout(r, 1300));
 
-      const txHash = '0x' + Array.from({ length: 32 }, () =>
-        Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-      ).join('');
+      const txHash =
+        '0x' +
+        Array.from({ length: 32 }, () =>
+          Math.floor(Math.random() * 256)
+            .toString(16)
+            .padStart(2, '0'),
+        ).join('');
 
-      setActiveTrials(prev =>
-        prev.map(t =>
-          t.trialIdHex === trialIdHex ? { ...t, enrolledCount: t.enrolledCount + 1 } : t
-        )
+      setActiveTrials((prev) =>
+        prev.map((t) => (t.trialIdHex === trialIdHex ? { ...t, enrolledCount: t.enrolledCount + 1 } : t)),
       );
 
-      setEnrolledTrialIds(prev => (prev.includes(trialIdHex) ? prev : [...prev, trialIdHex]));
+      setEnrolledTrialIds((prev) => (prev.includes(trialIdHex) ? prev : [...prev, trialIdHex]));
 
       setZkStatus({
         step: 'confirmed',
@@ -308,29 +309,32 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return { txHash };
     },
-    []
+    [],
   );
 
   // 4. Verify Trial Enrollment Action
-  const verifyEnrollment = useCallback(async (trialIdHex: string): Promise<boolean> => {
-    setZkStatus({
-      step: 'generating-proof',
-      message: 'Running validateTrialEnrollment circuit proof...',
-    });
+  const verifyEnrollment = useCallback(
+    async (trialIdHex: string): Promise<boolean> => {
+      setZkStatus({
+        step: 'generating-proof',
+        message: 'Running validateTrialEnrollment circuit proof...',
+      });
 
-    await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
 
-    const isEnrolled = enrolledTrialIds.includes(trialIdHex);
+      const isEnrolled = enrolledTrialIds.includes(trialIdHex);
 
-    setZkStatus({
-      step: 'confirmed',
-      message: isEnrolled
-        ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
-        : 'Verification FAILED: Hospital tag is not present in this trial enrollment set.',
-    });
+      setZkStatus({
+        step: 'confirmed',
+        message: isEnrolled
+          ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
+          : 'Verification FAILED: Hospital tag is not present in this trial enrollment set.',
+      });
 
-    return isEnrolled;
-  }, [enrolledTrialIds]);
+      return isEnrolled;
+    },
+    [enrolledTrialIds],
+  );
 
   const value = useMemo(
     () => ({
@@ -372,7 +376,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       verifyEnrollment,
       zkStatus,
       resetZkStatus,
-    ]
+    ],
   );
 
   return <MembraneContext.Provider value={value}>{children}</MembraneContext.Provider>;

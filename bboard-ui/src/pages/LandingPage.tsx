@@ -141,7 +141,9 @@ export const LandingPage: React.FC = () => {
                 <b>Local proof</b>
               </div>
               <h3>Hospital proves locally</h3>
-              <p>A proof server evaluates private records inside the hospital's environment. The records never move.</p>
+              <p>
+                A proof server evaluates private records inside the hospital&apos;s environment. The records never move.
+              </p>
             </article>
             <article>
               <span className="step-number">03</span>
@@ -165,8 +167,8 @@ export const LandingPage: React.FC = () => {
               <em>Private computation.</em>
             </h2>
             <p>
-              Membrane follows Midnight's dual-state model. The request and result live on-chain; patient records and
-              witness data stay within the hospital.
+              Membrane follows Midnight&apos;s dual-state model. The request and result live on-chain; patient records
+              and witness data stay within the hospital.
             </p>
             <div className="privacy-points">
               <div>
@@ -294,7 +296,7 @@ export const LandingPage: React.FC = () => {
             <h2>
               Ask the data.
               <br />
-              Don't take the data.
+              Don&apos;t take the data.
             </h2>
           </div>
           <button type="button" onClick={() => navigate('/lab')}>

@@ -12,15 +12,7 @@ import {
   Button,
   IconButton,
 } from '@mui/material';
-import {
-  Science,
-  LocalHospital,
-  Public,
-  Close,
-  Shield,
-  Lock,
-  VerifiedUser,
-} from '@mui/icons-material';
+import { Science, LocalHospital, Public, Close, Shield, Lock, VerifiedUser } from '@mui/icons-material';
 import { useMembrane, type UserRole } from '../contexts/MembraneContext';
 
 interface PortalSwitcherDialogProps {
@@ -180,7 +172,9 @@ export const PortalSwitcherDialog: React.FC<PortalSwitcherDialogProps> = ({ open
         >
           <Lock sx={{ color: '#60a5fa', fontSize: 18, flexShrink: 0 }} />
           <Typography variant="body2" sx={{ color: '#9ca3af', fontSize: '0.8rem' }}>
-            <strong>Cryptographic Stakeholder Isolation:</strong> Each portal operates in its own security domain. Research Sponsors cannot access hospital patient records; Healthcare Providers cannot alter sponsor protocols; Public Auditors only inspect verified zero-knowledge proofs.
+            <strong>Cryptographic Stakeholder Isolation:</strong> Each portal operates in its own security domain.
+            Research Sponsors cannot access hospital patient records; Healthcare Providers cannot alter sponsor
+            protocols; Public Auditors only inspect verified zero-knowledge proofs.
           </Typography>
         </Box>
 
@@ -199,9 +193,7 @@ export const PortalSwitcherDialog: React.FC<PortalSwitcherDialogProps> = ({ open
                 key={p.role}
                 sx={{
                   background: isCurrent ? p.bg : '#141722',
-                  border: isCurrent
-                    ? `1px solid ${p.accentColor}`
-                    : '1px solid #232738',
+                  border: isCurrent ? `1px solid ${p.accentColor}` : '1px solid #232738',
                   boxShadow: 'none !important',
                   borderRadius: '10px',
                   display: 'flex',
@@ -268,12 +260,18 @@ export const PortalSwitcherDialog: React.FC<PortalSwitcherDialogProps> = ({ open
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#f3f4f6', mb: 0.3 }}>
                     {p.title}
                   </Typography>
-                  <Typography variant="caption" sx={{ color: p.accentColor, fontWeight: 600, mb: 1.2, display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: p.accentColor, fontWeight: 600, mb: 1.2, display: 'block' }}
+                  >
                     {p.organization}
                   </Typography>
 
                   {/* Description */}
-                  <Typography variant="body2" sx={{ color: '#8b92a5', lineHeight: 1.5, mb: 2, minHeight: 60, fontSize: '0.8rem' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: '#8b92a5', lineHeight: 1.5, mb: 2, minHeight: 60, fontSize: '0.8rem' }}
+                  >
                     {p.description}
                   </Typography>
 
@@ -339,7 +337,13 @@ export const PortalSwitcherDialog: React.FC<PortalSwitcherDialogProps> = ({ open
         <Typography variant="caption" sx={{ color: '#6b7280' }}>
           Midnight Network (Preview) • Zero PHI Leakage Guaranteed
         </Typography>
-        <Button onClick={onClose} variant="outlined" color="inherit" size="small" sx={{ borderRadius: '6px', color: '#8b92a5', borderColor: '#262a3b' }}>
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          color="inherit"
+          size="small"
+          sx={{ borderRadius: '6px', color: '#8b92a5', borderColor: '#262a3b' }}
+        >
           Dismiss
         </Button>
       </DialogActions>

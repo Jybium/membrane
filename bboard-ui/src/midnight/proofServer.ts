@@ -56,7 +56,7 @@ export async function checkProofServer(targetUri?: string): Promise<boolean> {
     const timer = setTimeout(() => controller.abort(), 2000);
 
     // Any HTTP response (including 200, 404, or 405) indicates that the proof server is actively listening
-    const res = await fetch(`${uri}`, {
+    await fetch(`${uri}`, {
       method: 'GET',
       mode: 'no-cors', // Proof server might not send CORS headers to origin localhost:5173
       signal: controller.signal,
@@ -112,7 +112,11 @@ export function setSimulatedProver(enabled: boolean): void {
   currentState = {
     ...currentState,
     isSimulated: enabled,
-    status: enabled ? 'online' : currentState.status === 'online' && !currentState.latencyMs ? 'offline' : currentState.status,
+    status: enabled
+      ? 'online'
+      : currentState.status === 'online' && !currentState.latencyMs
+        ? 'offline'
+        : currentState.status,
     message: enabled ? 'Active (Simulated Browser Enclave)' : undefined,
   };
   notify();

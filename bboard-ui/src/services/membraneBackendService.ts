@@ -11,8 +11,7 @@
  * - GET  /v1/demo-hosp-a-data/patient-ct-requirement-count -> Get matching patient count for criteria
  */
 
-const API_BASE_URL =
-  (import.meta.env.VITE_MEMBRANE_API_URL as string) || 'https://membrane-api.onrender.com/v1';
+const API_BASE_URL = (import.meta.env.VITE_MEMBRANE_API_URL as string) || 'https://membrane-api.onrender.com/v1';
 
 export interface IndexedTrialDto {
   id?: number | string;
@@ -113,11 +112,7 @@ export const MembraneBackendService = {
    * Fetches indexed clinical trials from live API:
    * GET /v1/clinical-trials/index?diseaseCode={diseaseCode}
    */
-  async getClinicalTrials(
-    page = 1,
-    limit = 20,
-    diseaseCode = '',
-  ): Promise<PaginatedResult<IndexedTrialDto>> {
+  async getClinicalTrials(page = 1, limit = 20, diseaseCode = ''): Promise<PaginatedResult<IndexedTrialDto>> {
     const url = new URL(`${API_BASE_URL}/clinical-trials/index`);
     if (diseaseCode) {
       url.searchParams.set('diseaseCode', diseaseCode);
@@ -210,11 +205,7 @@ export const MembraneBackendService = {
    * Evaluates Demo A hospital candidate count for clinical trial requirements:
    * GET /v1/demo-hosp-a-data/patient-ct-requirement-count?icd={icd}&minAge={minAge}&maxAge={maxAge}
    */
-  async getPatientRequirementCount(
-    diseaseCode: string,
-    minAge: number,
-    maxAge: number,
-  ): Promise<number> {
+  async getPatientRequirementCount(diseaseCode: string, minAge: number, maxAge: number): Promise<number> {
     const url = new URL(`${API_BASE_URL}/demo-hosp-a-data/patient-ct-requirement-count`);
     url.searchParams.set('icd', diseaseCode);
     url.searchParams.set('minAge', minAge.toString());
@@ -248,11 +239,7 @@ export const MembraneBackendService = {
    * Fetches the hospital's private consented patients from live API:
    * GET /v1/demo-hosp-a-data/patients?icd={icd}
    */
-  async getHospitalPatients(
-    page = 1,
-    limit = 20,
-    diseaseCode = '',
-  ): Promise<PaginatedResult<PatientDto>> {
+  async getHospitalPatients(page = 1, limit = 20, diseaseCode = ''): Promise<PaginatedResult<PatientDto>> {
     const url = new URL(`${API_BASE_URL}/demo-hosp-a-data/patients`);
     if (diseaseCode) {
       url.searchParams.set('icd', diseaseCode);
