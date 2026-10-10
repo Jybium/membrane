@@ -3,6 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { AppHeader } from '../components/AppHeader';
 import { RowSkeleton } from '../components/Skeleton';
 import { MIDNIGHT_CONFIG, isContractConfigured } from '../midnight/config';
+import {
+  subscribeOnchainContract,
+  fetchOnchainContractState,
+  type OnchainContractState,
+} from '../midnight/onchainLedger';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 
@@ -31,6 +36,19 @@ export const NetworkAuditorPage: React.FC = () => {
 
   const [indexedTrials, setIndexedTrials] = useState<IndexRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [onchainState, setOnchainState] = useState<OnchainContractState>({
+    address: MIDNIGHT_CONFIG.contractAddress,
+    isDeployed: false,
+    stateBytesLength: 0,
+    lastChecked: null,
+    status: 'checking',
+  });
+
+  useEffect(() => {
+    const unsub = subscribeOnchainContract(setOnchainState);
+    void fetchOnchainContractState();
+    return unsub;
+  }, []);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -159,24 +177,59 @@ export const NetworkAuditorPage: React.FC = () => {
                 </span>
                 <p
                   style={{
-                    margin: '6px 0 0',
+                    margin: '6px 0 4px',
                     fontFamily: 'monospace',
                     fontSize: 9.5,
                     wordBreak: 'break-all',
                     color: '#1A2A39',
                   }}
                 >
-                  {MIDNIGHT_CONFIG.contractAddress ||
-                    '622af7d4d88fc425bb8df91d3bcde645dc2a4d9dea6f64beef4046a8c2758b75'}
+                  {MIDNIGHT_CONFIG.contractAddress}
                 </p>
+                <a
+                  href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: '0.74rem', color: '#4E93B4', textDecoration: 'underline' }}
+                >
+                  View on Midnight Explorer ↗
+                </a>
+              </div>
+
+              <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Live On-Chain Consensus
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void fetchOnchainContractState()}
+                    className="text-button"
+                    style={{ fontSize: '0.74rem', padding: '2px 6px' }}
+                  >
+                    Re-verify
+                  </button>
+                </div>
+                <p style={{ margin: '6px 0 2px', fontSize: 11, fontWeight: 700, color: onchainState.isDeployed ? '#10B981' : '#D9822B' }}>
+                  {onchainState.isDeployed ? '✓ Verified on Midnight Preview' : 'Checking Indexer...'}
+                </p>
+                <div style={{ fontSize: 9.5, color: '#556675', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span>State Size: <strong>{onchainState.stateBytesLength.toLocaleString()} bytes</strong></span>
+                  {onchainState.latestBlockHeight && (
+                    <span>Block Height: <strong>#{onchainState.latestBlockHeight.toLocaleString()}</strong></span>
+                  )}
+                  {onchainState.latestTxId && (
+                    <span>Deployment Action Tx: <strong>#{onchainState.latestTxId}</strong></span>
+                  )}
+                </div>
               </div>
 
               <div style={{ padding: 14, background: '#FAF7F0', border: '1px solid #E2DDD2', borderRadius: 8 }}>
                 <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
                   Auditor Wallet Session
                 </span>
-                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, color: '#1A2A39' }}>
-                  {walletSession ? walletSession.address : 'Unconnected (read-only verification)'}
+                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, color: '#1A2A39', wordBreak: 'break-all' }}>
+                  {walletSession ? walletSession.address : 'Unconnected (read-only verification node)'}
                 </p>
               </div>
             </div>

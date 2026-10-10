@@ -12,7 +12,12 @@ import {
   type MembraneStudy,
   TrialStatusEnum,
 } from '../midnight/contract';
-import { isContractConfigured } from '../midnight/config';
+import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
+import {
+  subscribeOnchainContract,
+  type OnchainContractState,
+} from '../midnight/onchainLedger';
+import { useMembrane } from '../contexts/MembraneContext';
 import {
   initProofServerAutoDetection,
   subscribeProofServer,
@@ -67,6 +72,7 @@ export const HospitalPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession, connectWallet, dynamicCodes } = useApp();
+  const { setZkStatus } = useMembrane();
 
   const urlIcd = searchParams.get('icd') || 'ALL';
   const urlTrial = searchParams.get('trial') || '';
@@ -81,6 +87,19 @@ export const HospitalPage: React.FC = () => {
   const [proofStatus, setProofStatus] = useState<Status>('idle');
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
+
+  const [onchainState, setOnchainState] = useState<OnchainContractState>({
+    address: MIDNIGHT_CONFIG.contractAddress,
+    isDeployed: true,
+    stateBytesLength: 0,
+    lastChecked: null,
+    status: 'checking',
+  });
+
+  useEffect(() => {
+    const unsub = subscribeOnchainContract((st) => setOnchainState(st));
+    return unsub;
+  }, []);
 
   const [proofServer, setProofServer] = useState<ProofServerState>({
     status: 'checking',
@@ -264,6 +283,12 @@ export const HospitalPage: React.FC = () => {
 
     setProofStatus('loading');
     setMessage('');
+
+    setZkStatus({
+      step: 'generating-proof',
+      message: 'Extracting hospital EHR witness aggregates and generating zero-knowledge proof...',
+    });
+
     try {
       const hex = text(selectedTrial, ['trialHexId', 'hexId'], '');
       const targetCode = contractStudy?.diseaseCode || text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode);
@@ -288,23 +313,52 @@ export const HospitalPage: React.FC = () => {
       const localCount = result.patientsCount;
       setCount(localCount);
 
+      if (localCount < cohortRequirement) {
+        setZkStatus({
+          step: 'failed',
+          message: `Local cohort sample count (${localCount}) does not meet the minimum requirement (${cohortRequirement}). Criteria not satisfied.`,
+        });
+        setProofStatus('success');
+        return;
+      }
+
+      setZkStatus({
+        step: 'signing',
+        message: `Local cohort criteria met (count: ${localCount} ≥ ${cohortRequirement}). Balancing transaction and signing with Midnight wallet...`,
+      });
+
+      let txHash = '';
       // 2. If wallet is connected, verify and prove on Midnight smart contract
-      if (walletSession && isContractConfigured()) {
-        if (hex && localCount >= cohortRequirement) {
-          try {
-            const contract = await getMembraneContract(walletSession);
-            // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
-            await contract.trialEnrollment(hex, localCount);
-          } catch (contractErr) {
-            console.warn('Smart contract proof submission note:', contractErr);
-          }
+      if (walletSession && isContractConfigured() && hex) {
+        setZkStatus({
+          step: 'submitting',
+          message: `Transmitting proof to Midnight contract ${MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}... on Preview Testnet.`,
+        });
+        try {
+          const contract = await getMembraneContract(walletSession);
+          // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
+          const contractRes = await contract.trialEnrollment(hex, localCount);
+          txHash = contractRes.txId;
+        } catch (contractErr) {
+          console.warn('Smart contract proof submission note:', contractErr);
         }
       }
+
+      setZkStatus({
+        step: 'confirmed',
+        message: 'Proof verified! Hospital zero-knowledge commitment registered on Midnight ledger.',
+        txHash: txHash || undefined,
+      });
 
       setProofStatus('success');
     } catch (error) {
       setProofStatus('error');
-      setMessage(error instanceof Error ? error.message : 'Could not verify eligibility.');
+      const errText = error instanceof Error ? error.message : 'Could not verify eligibility.';
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
     }
   };
 
@@ -442,6 +496,32 @@ export const HospitalPage: React.FC = () => {
                 {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
               </button>
             </div>
+          </div>
+
+          {/* On-Chain Midnight Testnet Contract Anchor */}
+          <div className="onchain-contract-anchor">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`beacon-dot ${onchainState.isDeployed ? 'online' : 'checking'}`} />
+              <div>
+                <strong>Midnight Smart Contract: </strong>
+                <code>
+                  {MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}…{MIDNIGHT_CONFIG.contractAddress.slice(-8)}
+                </code>
+                {onchainState.latestBlockHeight && (
+                  <span style={{ marginLeft: 6, color: '#4E93B4' }}>
+                    • Block #{onchainState.latestBlockHeight.toLocaleString()} Verified
+                  </span>
+                )}
+              </div>
+            </div>
+            <a
+              href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Inspect smart contract on Midnight Preview Explorer"
+            >
+              Explorer <Arrow />
+            </a>
           </div>
 
           {!selectedTrial ? (

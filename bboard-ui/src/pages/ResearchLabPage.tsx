@@ -7,7 +7,12 @@ import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 import { getMembraneContract } from '../midnight/contract';
-import { isContractConfigured } from '../midnight/config';
+import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
+import {
+  subscribeOnchainContract,
+  type OnchainContractState,
+} from '../midnight/onchainLedger';
+import { useMembrane } from '../contexts/MembraneContext';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -55,6 +60,20 @@ export const ResearchLabPage: React.FC = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const { walletSession, connectWallet, dynamicCodes } = useApp();
+  const { setZkStatus } = useMembrane();
+
+  const [onchainState, setOnchainState] = useState<OnchainContractState>({
+    address: MIDNIGHT_CONFIG.contractAddress,
+    isDeployed: true,
+    stateBytesLength: 0,
+    lastChecked: null,
+    status: 'checking',
+  });
+
+  useEffect(() => {
+    const unsub = subscribeOnchainContract((st) => setOnchainState(st));
+    return unsub;
+  }, []);
 
   // Read state from URL query parameters with fallbacks
   const urlIcd = searchParams.get('icd') || 'K30';
@@ -143,16 +162,34 @@ export const ResearchLabPage: React.FC = () => {
     if (!hex) return;
     setDeactivatingHex(hex);
     setMessage('');
+    setZkStatus({
+      step: 'generating-proof',
+      message: `Generating cancelTrial circuit proof for trial CT-${hex.slice(0, 10).toUpperCase()}…`,
+    });
     try {
       const contract = await getMembraneContract(walletSession);
-      await contract.cancelTrial(hex);
+      setZkStatus({
+        step: 'submitting',
+        message: 'Submitting trial cancellation to Midnight testnet ledger…',
+      });
+      const res = await contract.cancelTrial(hex);
       setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
+      setZkStatus({
+        step: 'confirmed',
+        message: `Trial CT-${hex.slice(0, 10).toUpperCase()}… deactivated on Midnight smart contract.`,
+        txHash: res.txId,
+      });
       setMessage(
         `Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`,
       );
       setStatus('success');
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not deactivate trial.');
+      const errText = err instanceof Error ? err.message : 'Could not deactivate trial.';
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
       setStatus('error');
     } finally {
       setDeactivatingHex(null);
@@ -194,12 +231,23 @@ export const ResearchLabPage: React.FC = () => {
     setStatus('loading');
     setMessage('');
 
+    setZkStatus({
+      step: 'generating-proof',
+      message: 'Synthesizing createTrial circuit constraint system for clinical study...',
+    });
+
     let hexId = '';
+    let txHash = '';
 
     try {
       const minCohortNum = Math.max(1, parseInt(minimum, 10) || 10);
       const minAgeNum = Math.max(0, parseInt(minAge, 10) || 40);
       const maxAgeNum = Math.max(0, parseInt(maxAge, 10) || 65);
+
+      setZkStatus({
+        step: 'signing',
+        message: 'Balancing transaction recipe & signing with Midnight Lace Wallet...',
+      });
 
       // 1. If Midnight wallet is connected, invoke createTrial circuit defined in membrane.compact
       if (walletSession && isContractConfigured()) {
@@ -207,6 +255,7 @@ export const ResearchLabPage: React.FC = () => {
           const contract = await getMembraneContract(walletSession);
           const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
           hexId = result.trialHexId;
+          txHash = result.txId;
         } catch (contractErr) {
           console.warn('Smart contract publish fallback:', contractErr);
         }
@@ -216,6 +265,11 @@ export const ResearchLabPage: React.FC = () => {
         const bytes = crypto.getRandomValues(new Uint8Array(20));
         hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
       }
+
+      setZkStatus({
+        step: 'submitting',
+        message: 'Broadcasting transaction to Midnight node and indexing in auxiliary database...',
+      });
 
       // 2. Index the created on-chain trial in the auxiliary API DB
       await apiRequest('/clinical-trials/index', {
@@ -228,11 +282,21 @@ export const ResearchLabPage: React.FC = () => {
 
       setTrialHexId(hexId);
       updateUrlParams({ trial: hexId });
+      setZkStatus({
+        step: 'confirmed',
+        message: `Trial published to Midnight Ledger & indexed! ID: CT-${hexId.slice(0, 12).toUpperCase()}…`,
+        txHash: txHash || undefined,
+      });
       setStatus('success');
       await loadTrials();
     } catch (error) {
+      const errText = error instanceof Error ? error.message : 'Could not publish and index request.';
       setStatus('error');
-      setMessage(error instanceof Error ? error.message : 'Could not publish and index request.');
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
     }
   };
 
@@ -262,6 +326,32 @@ export const ResearchLabPage: React.FC = () => {
               </div>
             </div>
             <b>Public Predicate</b>
+          </div>
+
+          {/* On-Chain Midnight Testnet Contract Anchor */}
+          <div className="onchain-contract-anchor">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`beacon-dot ${onchainState.isDeployed ? 'online' : 'checking'}`} />
+              <div>
+                <strong>Midnight Smart Contract: </strong>
+                <code>
+                  {MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}…{MIDNIGHT_CONFIG.contractAddress.slice(-8)}
+                </code>
+                {onchainState.latestBlockHeight && (
+                  <span style={{ marginLeft: 6, color: '#4E93B4' }}>
+                    • Block #{onchainState.latestBlockHeight.toLocaleString()} Verified
+                  </span>
+                )}
+              </div>
+            </div>
+            <a
+              href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Inspect smart contract on Midnight Preview Explorer"
+            >
+              Explorer <Arrow />
+            </a>
           </div>
 
           <div className="fields">

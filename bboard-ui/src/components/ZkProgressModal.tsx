@@ -13,8 +13,9 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import { CheckCircle, Error, Shield, ContentCopy, Terminal } from '@mui/icons-material';
+import { CheckCircle, Error, Shield, ContentCopy, Terminal, OpenInNew } from '@mui/icons-material';
 import { useMembrane } from '../contexts/MembraneContext';
+import { MIDNIGHT_CONFIG } from '../midnight/config';
 
 const STEPS = ['Witness Private State', 'ZK Proof Server (:6300)', 'Lace Wallet Balancing', 'Midnight Node Ledger'];
 
@@ -243,6 +244,43 @@ export const ZkProgressModal: React.FC = () => {
           </Box>
         </Box>
 
+        {/* On-Chain Midnight Contract Anchor */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#0a0d14',
+            border: '1px solid #1c2233',
+            borderRadius: '6px',
+            px: 1.5,
+            py: 0.8,
+            mb: 2,
+            fontSize: '0.72rem',
+          }}
+        >
+          <Box sx={{ textAlign: 'left' }}>
+            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.66rem', display: 'block', fontWeight: 600 }}>
+              MIDNIGHT PREVIEW TESTNET CONTRACT
+            </Typography>
+            <Typography variant="body2" sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#94a3b8', fontSize: '0.72rem' }}>
+              {MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}…{MIDNIGHT_CONFIG.contractAddress.slice(-8)}
+            </Typography>
+          </Box>
+          <Tooltip title="View Smart Contract on Midnight Explorer">
+            <IconButton
+              size="small"
+              component="a"
+              href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ color: '#818cf8' }}
+            >
+              <OpenInNew fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
         {/* Transaction ID Pill */}
         {zkStatus.txHash && (
           <Box
@@ -278,11 +316,25 @@ export const ZkProgressModal: React.FC = () => {
                 {zkStatus.txHash}
               </Typography>
             </Box>
-            <Tooltip title={copiedTx ? 'Copied!' : 'Copy Tx Hash'}>
-              <IconButton size="small" onClick={copyTxHash} sx={{ color: '#34d399' }}>
-                <ContentCopy fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Tooltip title={copiedTx ? 'Copied!' : 'Copy Tx Hash'}>
+                <IconButton size="small" onClick={copyTxHash} sx={{ color: '#34d399' }}>
+                  <ContentCopy fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="View Transaction on Midnight Preview Explorer">
+                <IconButton
+                  size="small"
+                  component="a"
+                  href={MIDNIGHT_CONFIG.explorerTxUrl(zkStatus.txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ color: '#34d399' }}
+                >
+                  <OpenInNew fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         )}
 
