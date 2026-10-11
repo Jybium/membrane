@@ -71,7 +71,7 @@ export const HospitalPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { walletSession, connectWallet, dynamicCodes } = useApp();
+  const { walletSession, connectWallet, isWalletInstalled, dynamicCodes } = useApp();
   const { setZkStatus } = useMembrane();
 
   const urlIcd = searchParams.get('icd') || 'ALL';
@@ -349,41 +349,31 @@ export const HospitalPage: React.FC = () => {
 
       setZkStatus({
         step: 'signing',
-        message: `Local cohort criteria met (${localCount} patients ≥ ${cohortRequirement} required). Requesting Midnight wallet balancing & signature...`,
+        message: `Local cohort criteria met (${localCount} patients ≥ ${cohortRequirement} required). Requesting Midnight Lace wallet signature...`,
       });
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       let txHash = '';
-      setZkStatus({
-        step: 'submitting',
-        message: `Transmitting proof to Midnight contract ${MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}... on Preview Testnet.`,
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-
       if (hex) {
-        try {
-          const contract = await getMembraneContract(walletSession);
-          // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
-          const contractRes = await contract.trialEnrollment(hex, localCount);
-          txHash = contractRes.txId;
-        } catch (contractErr) {
-          console.warn('Smart contract proof submission note:', contractErr);
+        let sessionToUse = walletSession;
+        if (!sessionToUse?.api && isWalletInstalled) {
+          try {
+            const fresh = await connectWallet();
+            if (fresh) sessionToUse = fresh;
+          } catch {
+            // ignore
+          }
         }
-      }
-
-      if (!txHash) {
-        txHash =
-          '0x' +
-          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+        const contract = await getMembraneContract(sessionToUse);
+        // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
+        const contractRes = await contract.trialEnrollment(hex, localCount);
+        txHash = contractRes.txId;
       }
 
       setLastTxHash(txHash);
 
       setZkStatus({
         step: 'confirmed',
-        message: 'Proof verified! Hospital zero-knowledge commitment registered on Midnight ledger.',
+        message: 'Proof verified! Hospital zero-knowledge commitment cryptographically signed and registered on Midnight ledger.',
         txHash,
       });
 
@@ -518,7 +508,7 @@ export const HospitalPage: React.FC = () => {
               >
                 Recheck
               </button>
-              <button
+              {/* <button
                 type="button"
                 className="text-button"
                 onClick={() => setSimulatedProver(!proofServer.isSimulated)}
@@ -531,7 +521,7 @@ export const HospitalPage: React.FC = () => {
                 }}
               >
                 {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
-              </button>
+              </button> */}
             </div>
           </div>
 

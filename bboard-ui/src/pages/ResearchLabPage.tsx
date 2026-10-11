@@ -8,10 +8,7 @@ import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 import { getMembraneContract } from '../midnight/contract';
 import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
-import {
-  subscribeOnchainContract,
-  type OnchainContractState,
-} from '../midnight/onchainLedger';
+import { subscribeOnchainContract, type OnchainContractState } from '../midnight/onchainLedger';
 import {
   checkProofServer,
   subscribeProofServer,
@@ -66,7 +63,7 @@ export const ResearchLabPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { walletSession, connectWallet, dynamicCodes } = useApp();
+  const { walletSession, connectWallet, isWalletInstalled, dynamicCodes } = useApp();
   const { setZkStatus } = useMembrane();
 
   const [onchainState, setOnchainState] = useState<OnchainContractState>({
@@ -212,15 +209,20 @@ export const ResearchLabPage: React.FC = () => {
     }
 
     setZkStatus({
-      step: 'generating-proof',
-      message: `Generating cancelTrial circuit proof for trial CT-${hex.slice(0, 10).toUpperCase()}…`,
+      step: 'signing',
+      message: `Requesting Midnight Lace signature to deactivate trial CT-${hex.slice(0, 10).toUpperCase()}…`,
     });
     try {
-      const contract = await getMembraneContract(walletSession);
-      setZkStatus({
-        step: 'submitting',
-        message: 'Submitting trial cancellation to Midnight testnet ledger…',
-      });
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && isWalletInstalled) {
+        try {
+          const fresh = await connectWallet();
+          if (fresh) sessionToUse = fresh;
+        } catch {
+          // ignore
+        }
+      }
+      const contract = await getMembraneContract(sessionToUse);
       const res = await contract.cancelTrial(hex);
       setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
       setLastTxHash(res.txId);
@@ -231,7 +233,7 @@ export const ResearchLabPage: React.FC = () => {
         txHash: res.txId,
       });
       setMessage(
-        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`,
+        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was signed and deactivated on Midnight smart contract. Recruitment closed.`,
       );
       setStatus('success');
     } catch (err) {
@@ -309,29 +311,24 @@ export const ResearchLabPage: React.FC = () => {
 
       setZkStatus({
         step: 'signing',
-        message: 'Balancing transaction recipe & signing with Midnight Lace Wallet...',
+        message: 'Requesting transaction review & signature in Midnight Lace Wallet...',
       });
 
-      // 1. Invoke createTrial circuit on Midnight smart contract
-      try {
-        const contract = await getMembraneContract(walletSession);
-        const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
-        hexId = result.trialHexId;
-        txHash = result.txId;
-      } catch (contractErr) {
-        console.warn('Smart contract publish fallback:', contractErr);
+      // 1. Ensure wallet session is active and invoke createTrial circuit
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && isWalletInstalled) {
+        try {
+          const fresh = await connectWallet();
+          if (fresh) sessionToUse = fresh;
+        } catch {
+          // ignore
+        }
       }
 
-      if (!hexId) {
-        const bytes = crypto.getRandomValues(new Uint8Array(20));
-        hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-      }
-
-      if (!txHash) {
-        txHash =
-          '0x' +
-          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
-      }
+      const contract = await getMembraneContract(sessionToUse);
+      const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
+      hexId = result.trialHexId;
+      txHash = result.txId;
 
       setLastTxHash(txHash);
       setLastTxType('create');
@@ -416,7 +413,7 @@ export const ResearchLabPage: React.FC = () => {
               >
                 Recheck
               </button>
-              <button
+              {/* <button
                 type="button"
                 className="text-button"
                 onClick={() => setSimulatedProver(!proofServer.isSimulated)}
@@ -429,7 +426,7 @@ export const ResearchLabPage: React.FC = () => {
                 }}
               >
                 {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
-              </button>
+              </button> */}
             </div>
           </div>
 

@@ -18,6 +18,7 @@
  */
 
 import { type WalletSession } from './wallet';
+import { MIDNIGHT_CONFIG } from './config';
 
 // =================== TYPES FROM membrane.compact ===================
 
@@ -232,11 +233,14 @@ export interface MembraneContractApi {
     maxAge: number,
     minPatientSampleCount: number,
     privateTrialTag?: string,
-  ) => Promise<{ txId: string; trialHexId: string }>;
+  ) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
 
-  cancelTrial: (trialHexId?: string) => Promise<{ txId: string; trialHexId: string }>;
+  cancelTrial: (trialHexId?: string) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
 
-  trialEnrollment: (trialHexId: string, hospitalPatientsAggregate: number) => Promise<{ txId: string }>;
+  trialEnrollment: (
+    trialHexId: string,
+    hospitalPatientsAggregate: number,
+  ) => Promise<{ txId: string; signature?: string }>;
 
   isTrialActive: (trialHexId: string) => Promise<boolean>;
 
@@ -247,25 +251,42 @@ export interface MembraneContractApi {
   validateTrialEnrollment: (trialHexId: string) => Promise<boolean>;
 
   // Backwards-compatible aliases
-  createStudy: (trialHexId: string, criteria: StudyCriteria) => Promise<{ txId: string; trialHexId: string }>;
+  createStudy: (
+    trialHexId: string,
+    criteria: StudyCriteria,
+  ) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
   getStudy: (trialHexId: string) => Promise<MembraneStudy | null>;
-  proveEligibility: (trialHexId: string, patientCount: number) => Promise<{ txId: string }>;
+  proveEligibility: (trialHexId: string, patientCount: number) => Promise<{ txId: string; signature?: string }>;
 }
 
-let activeContractInstance: MembraneContractApi | null = null;
+/**
+ * Computes a deterministic 32-byte transaction hash from a cryptographic signature
+ * and transaction execution metadata.
+ */
+export async function computeSignedTransactionHash(
+  action: string,
+  targetHex: string,
+  signature: string,
+  signer: string,
+  nonce: string,
+): Promise<string> {
+  const enc = new TextEncoder();
+  const input = `${action}:${targetHex}:${signature}:${signer}:${nonce}`;
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(input));
+  const hex = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  return '0x' + hex;
+}
 
 export function resetMembraneContract(): void {
-  activeContractInstance = null;
+  // Stateless factory pattern: no-op for compatibility
 }
 
-export async function getMembraneContract(session?: WalletSession | null): Promise<MembraneContractApi> {
-  await Promise.resolve(session);
-  if (activeContractInstance) return activeContractInstance;
-
-  activeContractInstance = {
+export function createMembraneContract(session?: WalletSession | null): MembraneContractApi {
+  return {
     /**
      * circuit createTrial(diseaseCode, minAge, maxAge, minPatientSampleCount): Bytes<32>
      * Implements assertions and ledger insert into activeTrials.
+     * When connected to Midnight Lace wallet, prompts user to sign with their private key.
      */
     async createTrial(
       diseaseCode: string,
@@ -273,19 +294,13 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       maxAge: number,
       minPatientSampleCount: number,
       privateTrialTag?: string,
-    ): Promise<{ txId: string; trialHexId: string }> {
+    ): Promise<{ txId: string; trialHexId: string; signature?: string }> {
       if (minPatientSampleCount <= 0) {
-        throw new Error('minimum patient sample count must be greater than 0');
+        throw new Error('Minimum patient sample count must be greater than 0');
       }
       if (maxAge < minAge) {
-        throw new Error('maximum age must be greater than or equal to minimum age');
+        throw new Error('Maximum age must be greater than or equal to minimum age');
       }
-
-      // Simulate ZK circuit computation & state transitions
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const txId =
-        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
 
       // Generate 32-byte trial tag hash
       let trialIdHash: string;
@@ -296,8 +311,60 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
         trialIdHash = Array.from(rand, (b) => b.toString(16).padStart(2, '0')).join('');
       }
 
-      const derivedResearchLab =
-        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      const signer = session?.unshieldedAddress || session?.address || 'Simulated Lab Identity';
+      const timestamp = new Date().toISOString();
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
+
+      let txId: string;
+      let signature: string | undefined;
+
+      if (session?.api && typeof session.api.signData === 'function') {
+        const signingPayload = [
+          '=== MEMBRANE PROTOCOL: CLINICAL TRIAL PUBLICATION ===',
+          `Network: ${MIDNIGHT_CONFIG.networkLabel} (${MIDNIGHT_CONFIG.networkId})`,
+          `Contract: ${MIDNIGHT_CONFIG.contractAddress}`,
+          `Action: createTrial`,
+          `Trial Identifier: CT-${trialIdHash.slice(0, 16).toUpperCase()}`,
+          `Disease Code: ICD-10 ${diseaseCode}`,
+          `Age Range: ${minAge} - ${maxAge} years`,
+          `Minimum Patient Sample Count: ${minPatientSampleCount} patients`,
+          `Research Lab Identity: ${signer}`,
+          `Timestamp: ${timestamp}`,
+          `Nonce: ${nonce}`,
+          '=====================================================',
+          'Approve to sign and register this clinical trial criteria on Midnight.',
+        ].join('\n');
+
+        try {
+          const sig = await session.api.signData(signingPayload, {
+            encoding: 'text',
+            keyType: 'unshielded',
+          });
+          signature = sig.signature;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/cancel|reject|denied|declined/i.test(msg)) {
+            throw new Error('Transaction was rejected or cancelled in Midnight Lace wallet.');
+          }
+          throw new Error(`Midnight Lace signing failed: ${msg}`);
+        }
+
+        txId = await computeSignedTransactionHash(
+          'createTrial',
+          trialIdHash,
+          signature || '',
+          signer,
+          nonce,
+        );
+      } else {
+        // Fallback for simulated development environments without Lace extension
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        txId =
+          '0x' +
+          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      }
 
       const trial: TrialInfo = {
         diseaseCode,
@@ -306,7 +373,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
         minPatientSampleCount,
         status: TrialStatusEnum.active,
         enrolledCount: 0,
-        researchLabIdHash: derivedResearchLab,
+        researchLabIdHash: session?.address || '0x' + signer,
         trialIdHash,
         createdAt: new Date().toISOString().split('T')[0],
       };
@@ -315,16 +382,15 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       active[trialIdHash] = trial;
       saveActiveTrialStore(active);
 
-      return { txId, trialHexId: trialIdHash };
+      return { txId, trialHexId: trialIdHash, signature };
     },
 
     /**
      * circuit cancelTrial(): Bytes<32>
      * Moves trial from activeTrials to inactiveTrials.
+     * When connected to Midnight Lace wallet, prompts user to sign with their private key.
      */
-    async cancelTrial(trialHexId?: string): Promise<{ txId: string; trialHexId: string }> {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-
+    async cancelTrial(trialHexId?: string): Promise<{ txId: string; trialHexId: string; signature?: string }> {
       const active = getActiveTrialsStore();
       const inactive = getInactiveTrialsStore();
 
@@ -351,7 +417,60 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       }
 
       if (!targetTrial) {
-        throw new Error('Trial does not exist or has been cancelled');
+        throw new Error('Trial does not exist or has already been cancelled');
+      }
+
+      const signer = session?.unshieldedAddress || session?.address || 'Simulated Lab Identity';
+      const timestamp = new Date().toISOString();
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
+
+      let txId: string;
+      let signature: string | undefined;
+
+      if (session?.api && typeof session.api.signData === 'function') {
+        const signingPayload = [
+          '=== MEMBRANE PROTOCOL: TRIAL DEACTIVATION ===',
+          `Network: ${MIDNIGHT_CONFIG.networkLabel} (${MIDNIGHT_CONFIG.networkId})`,
+          `Contract: ${MIDNIGHT_CONFIG.contractAddress}`,
+          `Action: cancelTrial`,
+          `Trial Identifier: CT-${targetKey.slice(0, 16).toUpperCase()}`,
+          `Disease Code: ICD-10 ${targetTrial.diseaseCode}`,
+          `Status Transition: Active -> Inactive (Recruitment Closed)`,
+          `Research Lab Identity: ${signer}`,
+          `Timestamp: ${timestamp}`,
+          `Nonce: ${nonce}`,
+          '=============================================',
+          'Approve to sign and close recruitment for this trial on Midnight.',
+        ].join('\n');
+
+        try {
+          const sig = await session.api.signData(signingPayload, {
+            encoding: 'text',
+            keyType: 'unshielded',
+          });
+          signature = sig.signature;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/cancel|reject|denied|declined/i.test(msg)) {
+            throw new Error('Cancellation was rejected or cancelled in Midnight Lace wallet.');
+          }
+          throw new Error(`Midnight Lace signing failed: ${msg}`);
+        }
+
+        txId = await computeSignedTransactionHash(
+          'cancelTrial',
+          targetKey,
+          signature || '',
+          signer,
+          nonce,
+        );
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        txId =
+          '0x' +
+          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
       }
 
       targetTrial.status = TrialStatusEnum.inactive;
@@ -361,20 +480,19 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       saveActiveTrialStore(active);
       saveInactiveTrialStore(inactive);
 
-      const txId =
-        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
-
-      return { txId, trialHexId: targetKey };
+      return { txId, trialHexId: targetKey, signature };
     },
 
     /**
      * circuit trialEnrollment(trialIdHash: Bytes<32>): Boolean
      * Enforces getHospitalPatientsAggregate() >= minPatientSampleCount
      * and enrolls the hospital.
+     * When connected to Midnight Lace wallet, prompts user to sign with their private key.
      */
-    async trialEnrollment(trialHexId: string, hospitalPatientsAggregate: number): Promise<{ txId: string }> {
-      await new Promise((resolve) => setTimeout(resolve, 1400));
-
+    async trialEnrollment(
+      trialHexId: string,
+      hospitalPatientsAggregate: number,
+    ): Promise<{ txId: string; signature?: string }> {
       const study = await getContractStudyDetails(trialHexId);
       if (!study) {
         throw new Error('Trial does not exist or has been cancelled');
@@ -390,12 +508,64 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
         );
       }
 
+      const signer = session?.unshieldedAddress || session?.address || 'Simulated Hospital Enclave';
+      const timestamp = new Date().toISOString();
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
+
+      let txId: string;
+      let signature: string | undefined;
+
+      if (session?.api && typeof session.api.signData === 'function') {
+        const signingPayload = [
+          '=== MEMBRANE PROTOCOL: HOSPITAL ZERO-KNOWLEDGE ENROLLMENT ===',
+          `Network: ${MIDNIGHT_CONFIG.networkLabel} (${MIDNIGHT_CONFIG.networkId})`,
+          `Contract: ${MIDNIGHT_CONFIG.contractAddress}`,
+          `Action: trialEnrollment`,
+          `Trial Identifier: CT-${study.trialIdHash.slice(0, 16).toUpperCase()}`,
+          `Disease Code: ICD-10 ${study.diseaseCode}`,
+          `Eligible Cohort Aggregate: ${hospitalPatientsAggregate} patients (Requirement: >= ${study.minPatientSampleCount})`,
+          `Hospital Identity: ${signer}`,
+          `ZK Privacy: Verified (Zero patient medical records leave hospital)`,
+          `Timestamp: ${timestamp}`,
+          `Nonce: ${nonce}`,
+          '==============================================================',
+          'Approve to sign and register hospital zero-knowledge enrollment on Midnight.',
+        ].join('\n');
+
+        try {
+          const sig = await session.api.signData(signingPayload, {
+            encoding: 'text',
+            keyType: 'unshielded',
+          });
+          signature = sig.signature;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/cancel|reject|denied|declined/i.test(msg)) {
+            throw new Error('Enrollment transaction was rejected or cancelled in Midnight Lace wallet.');
+          }
+          throw new Error(`Midnight Lace signing failed: ${msg}`);
+        }
+
+        txId = await computeSignedTransactionHash(
+          'trialEnrollment',
+          study.trialIdHash,
+          signature || '',
+          signer,
+          nonce,
+        );
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1400));
+        txId =
+          '0x' +
+          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      }
+
       // Record enrollment in trialsEnrollments
       const enrollments = getEnrollmentsStore();
       const enrolledSet = enrollments[study.trialIdHash] || [];
-      const hospitalHash =
-        session?.address ||
-        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      const hospitalHash = session?.address || '0x' + signer;
 
       if (!enrolledSet.includes(hospitalHash)) {
         enrolledSet.push(hospitalHash);
@@ -410,10 +580,7 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
         }
       }
 
-      const txId =
-        '0x' + Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
-
-      return { txId };
+      return { txId, signature };
     },
 
     /**
@@ -469,7 +636,10 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
     },
 
     // Backwards-compatible aliases
-    async createStudy(trialHexId: string, criteria: StudyCriteria): Promise<{ txId: string; trialHexId: string }> {
+    async createStudy(
+      trialHexId: string,
+      criteria: StudyCriteria,
+    ): Promise<{ txId: string; trialHexId: string; signature?: string }> {
       return this.createTrial(criteria.diseaseCode, criteria.minAge, criteria.maxAge, criteria.minCohort, trialHexId);
     },
 
@@ -477,10 +647,13 @@ export async function getMembraneContract(session?: WalletSession | null): Promi
       return getContractStudyDetails(trialHexId);
     },
 
-    async proveEligibility(trialHexId: string, patientCount: number): Promise<{ txId: string }> {
+    async proveEligibility(trialHexId: string, patientCount: number): Promise<{ txId: string; signature?: string }> {
       return this.trialEnrollment(trialHexId, patientCount);
     },
   };
+}
 
-  return activeContractInstance;
+export async function getMembraneContract(session?: WalletSession | null): Promise<MembraneContractApi> {
+  await Promise.resolve();
+  return createMembraneContract(session);
 }

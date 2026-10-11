@@ -2,11 +2,14 @@ import { MIDNIGHT_CONFIG } from './config';
 
 export interface WalletSession {
   address: string;
+  unshieldedAddress?: string;
+  shieldedAddress?: string;
   uris: {
     proverServerUri?: string;
     indexerUri?: string;
     nodeUri?: string;
   };
+  api?: any;
 }
 
 export interface MidnightExtensionProvider {
@@ -15,12 +18,18 @@ export interface MidnightExtensionProvider {
   icon?: string;
   isEnabled?: () => Promise<boolean>;
   connect?: (networkId: string) => Promise<{
-    getShieldedAddresses?: () => Promise<{ shieldedCoinPublicKey?: string }>;
-    getUnshieldedAddress?: () => Promise<string>;
+    getShieldedAddresses?: () => Promise<{ shieldedAddress?: string; shieldedCoinPublicKey?: string; shieldedEncryptionPublicKey?: string }>;
+    getUnshieldedAddress?: () => Promise<string | { unshieldedAddress: string }>;
+    signData?: (data: string, options: unknown) => Promise<{ data: string; signature: string; verifyingKey: string }>;
+    balanceUnsealedTransaction?: (tx: string, options?: unknown) => Promise<{ tx: string }>;
+    submitTransaction?: (tx: string) => Promise<void>;
   }>;
   enable?: () => Promise<{
-    getShieldedAddresses?: () => Promise<{ shieldedCoinPublicKey?: string }>;
-    getUnshieldedAddress?: () => Promise<string>;
+    getShieldedAddresses?: () => Promise<{ shieldedAddress?: string; shieldedCoinPublicKey?: string; shieldedEncryptionPublicKey?: string }>;
+    getUnshieldedAddress?: () => Promise<string | { unshieldedAddress: string }>;
+    signData?: (data: string, options: unknown) => Promise<{ data: string; signature: string; verifyingKey: string }>;
+    balanceUnsealedTransaction?: (tx: string, options?: unknown) => Promise<{ tx: string }>;
+    submitTransaction?: (tx: string) => Promise<void>;
   }>;
 }
 
@@ -103,21 +112,42 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
     if (!api) return null;
 
     let address = '';
-    if (typeof api.getShieldedAddresses === 'function') {
-      const state = await api.getShieldedAddresses();
-      address = state?.shieldedCoinPublicKey || '';
-    }
-    if (!address && typeof api.getUnshieldedAddress === 'function') {
-      address = await api.getUnshieldedAddress();
+    let unshieldedAddress = '';
+    let shieldedAddress = '';
+
+    if (typeof api.getUnshieldedAddress === 'function') {
+      try {
+        const unshielded = await api.getUnshieldedAddress();
+        unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
+      } catch (e) {
+        console.debug('Error querying unshielded address:', e);
+      }
     }
 
-    if (address) {
+    if (typeof api.getShieldedAddresses === 'function') {
+      try {
+        const state = await api.getShieldedAddresses();
+        shieldedAddress = state?.shieldedAddress || '';
+        address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
+      } catch (e) {
+        console.debug('Error querying shielded address:', e);
+      }
+    }
+
+    if (!address && unshieldedAddress) {
+      address = unshieldedAddress;
+    }
+
+    if (address || unshieldedAddress) {
       return {
-        address,
+        address: address || unshieldedAddress,
+        unshieldedAddress,
+        shieldedAddress,
         uris: {
           proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
           indexerUri: MIDNIGHT_CONFIG.indexerUri,
         },
+        api,
       };
     }
   } catch (err) {
@@ -146,31 +176,53 @@ export async function connectWallet(): Promise<WalletSession> {
 
         if (api) {
           let address = '';
-          if (typeof api.getShieldedAddresses === 'function') {
-            const state = await api.getShieldedAddresses();
-            address = state?.shieldedCoinPublicKey || '';
-          }
-          if (!address && typeof api.getUnshieldedAddress === 'function') {
-            address = await api.getUnshieldedAddress();
+          let unshieldedAddress = '';
+          let shieldedAddress = '';
+
+          if (typeof api.getUnshieldedAddress === 'function') {
+            try {
+              const unshielded = await api.getUnshieldedAddress();
+              unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
+            } catch (e) {
+              console.debug('Error querying unshielded address:', e);
+            }
           }
 
-          if (address) {
+          if (typeof api.getShieldedAddresses === 'function') {
+            try {
+              const state = await api.getShieldedAddresses();
+              shieldedAddress = state?.shieldedAddress || '';
+              address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
+            } catch (e) {
+              console.debug('Error querying shielded address:', e);
+            }
+          }
+
+          if (!address && unshieldedAddress) {
+            address = unshieldedAddress;
+          }
+
+          if (address || unshieldedAddress) {
             return {
-              address,
+              address: address || unshieldedAddress,
+              unshieldedAddress,
+              shieldedAddress,
               uris: {
                 proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
                 indexerUri: MIDNIGHT_CONFIG.indexerUri,
               },
+              api,
             };
           }
         }
       } catch (err) {
-        console.warn('Lace wallet connection prompt cancelled or failed, falling back to preview session', err);
+        console.warn('Lace wallet connection prompt cancelled or failed:', err);
+        throw err;
       }
     }
   }
 
-  // Realistic Sandbox Preview Session for dev & evaluation when Lace extension is not connected
+  // Realistic Sandbox Preview Session for dev & evaluation when Lace extension is not installed
   const mockAddresses = [
     'mn_shielded1q8v639420j88x0kltz99482hsa772km983ns002847a98',
     'mn_shielded1qy03mff2710398bb12984812aacc098112bb33445566',
