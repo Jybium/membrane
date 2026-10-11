@@ -26,7 +26,7 @@ query GetContract($address: String!) {
     actions {
       address
       transaction {
-        id
+        hash
         block {
           height
           timestamp
@@ -91,7 +91,7 @@ export async function fetchOnchainContractState(): Promise<OnchainContractState>
           actions?: Array<{
             address: string;
             transaction?: {
-              id: number | string;
+              hash: string;
               block?: {
                 height: number;
                 timestamp: number;
@@ -127,7 +127,7 @@ export async function fetchOnchainContractState(): Promise<OnchainContractState>
         stateBytesLength: contract.state ? Math.floor(contract.state.length / 2) : 0,
         latestBlockHeight: latestAction?.transaction?.block?.height,
         latestBlockTimestamp: latestAction?.transaction?.block?.timestamp,
-        latestTxId: latestAction?.transaction?.id,
+        latestTxId: latestAction?.transaction?.hash,
         lastChecked: Date.now(),
         status: 'online',
       };
