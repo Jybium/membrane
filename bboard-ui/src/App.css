@@ -1317,6 +1317,76 @@ input:focus {
   background: #A8761E;
 }
 
+/* On-Chain Transaction Hash Box */
+.tx-hash-box {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tx-hash-box .tx-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #065f46;
+}
+
+.tx-hash-box code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  color: #047857;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.tx-hash-box .tx-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tx-hash-box .tx-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.tx-hash-box .tx-btn:hover {
+  background: #059669;
+  color: white;
+}
+
+.tx-hash-box .tx-btn.secondary {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tx-hash-box .tx-btn.secondary:hover {
+  background: rgba(16, 185, 129, 0.25);
+  color: #047857;
+}
+
 /* Landing page */
 .landing {
   overflow-x: clip;

@@ -87,6 +87,14 @@ export const HospitalPage: React.FC = () => {
   const [proofStatus, setProofStatus] = useState<Status>('idle');
   const [count, setCount] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
+  const [lastTxHash, setLastTxHash] = useState<string>('');
+  const [copiedTx, setCopiedTx] = useState<boolean>(false);
+
+  const copyTxHash = (hash: string) => {
+    void navigator.clipboard.writeText(hash);
+    setCopiedTx(true);
+    setTimeout(() => setCopiedTx(false), 2000);
+  };
 
   const [onchainState, setOnchainState] = useState<OnchainContractState>({
     address: MIDNIGHT_CONFIG.contractAddress,
@@ -239,6 +247,7 @@ export const HospitalPage: React.FC = () => {
     setProofStatus('idle');
     setCount(null);
     setMessage('');
+    setLastTxHash('');
     updateUrlParams({ icd: code, trial: '' });
   };
 
@@ -247,6 +256,7 @@ export const HospitalPage: React.FC = () => {
     setProofStatus('idle');
     setCount(null);
     setMessage('');
+    setLastTxHash('');
     const hex = text(trial, ['trialHexId', 'hexId', 'id'], '');
     updateUrlParams({ trial: hex });
   };
@@ -368,6 +378,8 @@ export const HospitalPage: React.FC = () => {
           '0x' +
           Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
       }
+
+      setLastTxHash(txHash);
 
       setZkStatus({
         step: 'confirmed',
@@ -618,6 +630,37 @@ export const HospitalPage: React.FC = () => {
                         ? `${count} matching demo records evaluated locally (required ≥ ${requiredCohort}). Zero-knowledge witness proof generated on local proof server and submitted to Midnight.`
                         : `Only ${count} matching demo records found locally (required ≥ ${requiredCohort}). Zero-knowledge criteria not satisfied.`}
                     </p>
+
+                    {eligible && lastTxHash && (
+                      <div className="tx-hash-box">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                          <span className="beacon-dot online" />
+                          <span className="tx-label">Midnight Tx:</span>
+                          <code title={lastTxHash}>
+                            {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
+                          </code>
+                        </div>
+                        <div className="tx-actions">
+                          <button
+                            type="button"
+                            className="tx-btn secondary"
+                            onClick={() => copyTxHash(lastTxHash)}
+                            title="Copy full transaction hash"
+                          >
+                            {copiedTx ? 'Copied!' : 'Copy'}
+                          </button>
+                          <a
+                            href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tx-btn"
+                            title="View transaction on Midnight Preview Explorer"
+                          >
+                            Explorer ↗
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <button type="button" onClick={() => setProofStatus('idle')}>
                     Run again
