@@ -12,6 +12,13 @@ import {
   subscribeOnchainContract,
   type OnchainContractState,
 } from '../midnight/onchainLedger';
+import {
+  checkProofServer,
+  subscribeProofServer,
+  initProofServerAutoDetection,
+  setSimulatedProver,
+  type ProofServerState,
+} from '../midnight/proofServer';
 import { useMembrane } from '../contexts/MembraneContext';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
@@ -73,6 +80,25 @@ export const ResearchLabPage: React.FC = () => {
   useEffect(() => {
     const unsub = subscribeOnchainContract((st) => setOnchainState(st));
     return unsub;
+  }, []);
+
+  const [proofServer, setProofServer] = useState<ProofServerState>({
+    status: 'checking',
+    uri: 'http://localhost:6300',
+    isSimulated: false,
+    lastChecked: null,
+  });
+
+  // Real-time automatic detection and subscription for local proof server
+  useEffect(() => {
+    const stopAuto = initProofServerAutoDetection(12000);
+    const unsub = subscribeProofServer((state) => {
+      setProofServer(state);
+    });
+    return () => {
+      stopAuto();
+      unsub();
+    };
   }, []);
 
   // Read state from URL query parameters with fallbacks
@@ -172,6 +198,19 @@ export const ResearchLabPage: React.FC = () => {
     if (!hex) return;
     setDeactivatingHex(hex);
     setMessage('');
+
+    if (proofServer.status !== 'online') {
+      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute the trial cancellation proof.`;
+      setMessage(errMsg);
+      setZkStatus({
+        step: 'failed',
+        message: errMsg,
+      });
+      setStatus('error');
+      setDeactivatingHex(null);
+      return;
+    }
+
     setZkStatus({
       step: 'generating-proof',
       message: `Generating cancelTrial circuit proof for trial CT-${hex.slice(0, 10).toUpperCase()}…`,
@@ -240,6 +279,18 @@ export const ResearchLabPage: React.FC = () => {
   };
 
   const publish = async () => {
+    // Require proof server to be online (or simulated enclave enabled)
+    if (proofServer.status !== 'online') {
+      setStatus('error');
+      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to synthesize zero-knowledge circuit proofs for trial creation.`;
+      setMessage(errMsg);
+      setZkStatus({
+        step: 'failed',
+        message: errMsg,
+      });
+      return;
+    }
+
     setStatus('loading');
     setMessage('');
 
@@ -347,6 +398,41 @@ export const ResearchLabPage: React.FC = () => {
             <b>Public Predicate</b>
           </div>
 
+          {/* Proof Server Real-time Detection Banner */}
+          <div className={`proof-server-banner ${proofServer.status}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span className="beacon-dot" />
+              <div>
+                <strong>Local Proof Server: </strong>
+                <small>{proofServer.message || proofServer.uri}</small>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void checkProofServer()}
+                style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+              >
+                Recheck
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setSimulatedProver(!proofServer.isSimulated)}
+                title="Toggle simulated enclave if Docker proof server is not running locally"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 8px',
+                  color: proofServer.isSimulated ? '#10b981' : '#64748b',
+                  fontWeight: proofServer.isSimulated ? 600 : 400,
+                }}
+              >
+                {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
+              </button>
+            </div>
+          </div>
+
           {/* On-Chain Midnight Testnet Contract Anchor */}
           <div className="onchain-contract-anchor">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -420,12 +506,19 @@ export const ResearchLabPage: React.FC = () => {
             <button
               type="button"
               onClick={walletSession ? publish : connectWallet}
-              disabled={status === 'loading' || !diseaseCode}
+              disabled={status === 'loading' || !diseaseCode || proofServer.status === 'checking'}
+              title={
+                proofServer.status === 'offline'
+                  ? 'Local proof server is offline — cannot synthesize ZK proof'
+                  : undefined
+              }
             >
               {status === 'loading'
                 ? 'Publishing & Indexing…'
                 : walletSession
-                  ? 'Publish & Index Request'
+                  ? proofServer.status === 'offline'
+                    ? 'Proof Server Offline — Cannot Publish'
+                    : 'Publish & Index Request'
                   : 'Connect Wallet to Publish'}
               <Arrow />
             </button>
