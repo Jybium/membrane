@@ -355,7 +355,7 @@ export const LedgerExplorerView: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mb: 0.8 }}>
                     <Bolt sx={{ color: '#818cf8', fontSize: 18 }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#818cf8', fontSize: '0.82rem' }}>
-                      2. ZK Proof Server (:6300)
+                      2. ZK Proof Server
                     </Typography>
                   </Box>
                   <Typography variant="caption" sx={{ color: '#8b92a5', lineHeight: 1.4, display: 'block' }}>

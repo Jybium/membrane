@@ -17,7 +17,7 @@ import { CheckCircle, Error, Shield, ContentCopy, Terminal, OpenInNew } from '@m
 import { useMembrane } from '../contexts/MembraneContext';
 import { MIDNIGHT_CONFIG } from '../midnight/config';
 
-const STEPS = ['Witness Private State', 'ZK Proof Server (:6300)', 'Lace Wallet Balancing', 'Midnight Node Ledger'];
+const STEPS = ['Witness Private State', 'ZK Proof Server', 'Lace Wallet Balancing', 'Midnight Node Ledger'];
 
 export const ZkProgressModal: React.FC = () => {
   const { zkStatus, resetZkStatus } = useMembrane();
@@ -66,10 +66,15 @@ export const ZkProgressModal: React.FC = () => {
       ]);
     } else if (zkStatus.step === 'confirmed') {
       setLogLines((prev) => [...prev, '🎉 [3.2s] Transaction confirmed and committed to Midnight Ledger!']);
+    } else if (zkStatus.step === 'failed') {
+      setLogLines((prev) => [
+        ...prev,
+        `❌ [Error] ${zkStatus.message || 'Criteria not satisfied or transaction failed.'}`,
+      ]);
     } else if (zkStatus.step === 'idle') {
       setLogLines([]);
     }
-  }, [zkStatus.step]);
+  }, [zkStatus.step, zkStatus.message]);
 
   const copyTxHash = () => {
     if (zkStatus.txHash) {
@@ -260,10 +265,16 @@ export const ZkProgressModal: React.FC = () => {
           }}
         >
           <Box sx={{ textAlign: 'left' }}>
-            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.66rem', display: 'block', fontWeight: 600 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: '#64748b', fontSize: '0.66rem', display: 'block', fontWeight: 600 }}
+            >
               MIDNIGHT PREVIEW TESTNET CONTRACT
             </Typography>
-            <Typography variant="body2" sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#94a3b8', fontSize: '0.72rem' }}>
+            <Typography
+              variant="body2"
+              sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#94a3b8', fontSize: '0.72rem' }}
+            >
               {MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}…{MIDNIGHT_CONFIG.contractAddress.slice(-8)}
             </Typography>
           </Box>
