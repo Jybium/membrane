@@ -1,0 +1,153 @@
+Viewed PortalSwitcherDialog.tsx:1-100
+
+Connecting real hospital EHRs, onboarding new clinical sites, and cleanly separating user workflows is the core enterprise architecture of **Membrane**.
+
+---
+
+### Part 1: How to Connect a Hospital's EHR to Membrane
+
+In healthcare, patient records **can never be uploaded to cloud databases or blockchains**. Instead of moving data to the application, Membrane moves the **zero-knowledge verification compute to the hospital**.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       HOSPITAL PRIVATE INTRANET (ON-PREMISE)                │
+│                                                                             │
+│  ┌─────────────────────────┐               ┌──────────────────────────────┐ │
+│  │ Hospital EHR System     │               │ Membrane Hospital Node       │ │
+│  │ (Epic / Cerner / Postgres)               │ (Docker Container)           │ │
+│  │                         │  Private LAN  │                              │ │
+│  │ • Patients with Consent │──────────────►│ 1. Runs Predicate SQL/FHIR   │ │
+│  │ • Diagnoses (ICD-10)    │               │ 2. Extracts Sample Count (N) │ │
+│  │ • Age / Demographics    │               │ 3. Midnight Proof Server:    │ │
+│  └─────────────────────────┘               │    assert(N >= minCohort)    │ │
+│                                            └──────────────┬───────────────┘ │
+└───────────────────────────────────────────────────────────┼─────────────────┘
+                                                            │ 256-byte ZK Proof
+                                                            │ (ZERO patient data)
+                                                            ▼
+                                             ┌──────────────────────────────┐
+                                             │ Midnight Testnet Blockchain  │
+                                             │ Contract: e03c6abc…03e3      │
+                                             └──────────────────────────────┘
+```
+
+#### The 2 Primary EHR Connection Methods
+
+#### 1. HL7 FHIR API (Standard for Epic, Cerner, Meditech)
+Modern hospitals expose the **HL7 FHIR (Fast Healthcare Interoperability Resources)** REST API. The hospital node connects over internal HTTPS using OAuth2/MTLS:
+
+```typescript
+// hospital-agent/fhirClient.ts
+export async function getFhirConsentedPatientCount(criteria: {
+  diseaseCode: string;
+  minAge: number;
+  maxAge: number;
+}): Promise<number> {
+  const fhirBase = process.env.FHIR_ENDPOINT; // e.g. https://ehr.hospital.internal/fhir/r4
+  
+  // Query Condition resource matching ICD-10 code and patient age
+  const response = await fetch(
+    `${fhirBase}/Condition?code=${criteria.diseaseCode}&_include=Condition:patient&_summary=count`,
+    {
+      headers: {
+        Authorization: `Bearer ${getHospitalInternalToken()}`,
+        Accept: 'application/fhir+json',
+      },
+    }
+  );
+  
+  const bundle = await response.json();
+  return bundle.total || 0; // Only the aggregate count is returned to the local ZK circuit
+}
+```
+
+#### 2. Direct Read-Only SQL Replica (PostgreSQL, SQL Server, Oracle)
+For hospitals using relational databases or data lakes, the node connects to a local read-only database replica:
+
+```sql
+-- Executed inside the hospital node against internal database
+SELECT COUNT(DISTINCT p.patient_id) AS matching_count
+FROM patients p
+JOIN diagnoses d ON p.patient_id = d.patient_id
+WHERE d.icd_10_code = :diseaseCode
+  AND p.age BETWEEN :minAge AND :maxAge
+  AND p.research_consent_active = TRUE;
+```
+
+#### 3. Passing to Midnight Witness Circuit
+The extracted count is fed directly to the Compact smart contract witness in [`contract/membrane.compact`](file:///c:/Users/dell/software-engineering/projects/membrane/contract/membrane.compact):
+```compact
+witness getHospitalPatientsAggregate(): Uint<16>;
+
+export circuit trialEnrollment(trialIdHash: Bytes<32>): Boolean {
+  // Verifies count satisfies criteria without revealing the count
+  assert getHospitalPatientsAggregate() >= trial.minPatientSampleCount;
+  return true;
+}
+```
+
+---
+
+### Part 2: How to Onboard a New Hospital
+
+Onboarding a hospital follows a **4-step site activation process**:
+
+```
+[1. Generate Site Identity] ──► [2. Deploy Local Node] ──► [3. Configure EHR Link] ──► [4. Active on Ledger]
+  Institutional Midnight Key      Docker Compose Stack         Read-only FHIR / SQL         Commitment registered
+```
+
+#### Step 1: Institutional Midnight Key Generation
+The hospital generates an institutional Midnight shielded keypair:
+- **Public ID Hash**: Derived from their public key (e.g., `0x3a9f...c120`).
+- **Private Spending Key**: Stored securely in the hospital's Hardware Security Module (HSM) or local key vault.
+- *Privacy Guarantee*: Research labs see that a verified hospital enrolled, but cannot deanonymize the hospital's physical identity unless the hospital signs an off-chain disclosure.
+
+#### Step 2: Deploy the Docker Stack On-Premise
+The hospital IT team runs a single `docker-compose.yml` within their private subnet:
+```yaml
+version: '3.8'
+services:
+  midnight-proof-server:
+    image: midnightnetwork/proof-server:latest
+    ports:
+      - "127.0.0.1:6300:6300" # Local only, never exposed to internet
+
+  membrane-hospital-agent:
+    image: membraneprotocol/hospital-node:latest
+    environment:
+      - EHR_TYPE=fhir # or 'sql'
+      - FHIR_ENDPOINT=https://ehr.hospital.internal/fhir/r4
+      - MIDNIGHT_CONTRACT_ADDRESS=e03c6abcd309f053d96913999e6ea2ba5ce3b15386860f039e2c9e65e69d03e3
+      - MIDNIGHT_PROOF_SERVER_URL=http://midnight-proof-server:6300
+      - MIDNIGHT_INDEXER_URI=https://indexer.preview.midnight.network/api/v4/graphql
+```
+
+#### Step 3: Flag Patient Research Consent
+In the hospital EHR, coordinators tag consented patients. Only patients with `consent = true` are factored into the predicate query.
+
+#### Step 4: Site Active on Midnight Ledger
+The hospital is now ready to evaluate any trial broadcasted on Midnight. Feasibility queries run in milliseconds without human data-transfer agreements.
+
+---
+
+### Part 3: How to Separate Views and Flows (Role-Based Access)
+
+To prevent confusion and enforce strict security, users need distinct portals:
+
+| User Type | Portal | What They See | What They CANNOT See |
+| :--- | :--- | :--- | :--- |
+| **Research Lab (Sponsor)** | `/lab` | • Protocol Builder (ICD-10, Age, Min Cohort)<br>• Deployed Trials on Midnight<br>• Count of Enrolled Hospitals | ❌ Any hospital EHR records<br>❌ Individual patient counts<br>❌ `/vault` tab |
+| **Hospital Site Coordinator** | `/hospital`<br>`/vault` | • Open Trial Feasibility Queries<br>• One-click Local ZK Proof Generation<br>• Internal Consented Patient Vault | ❌ Other hospitals' private data<br>❌ Research lab internal keys |
+| **Auditor / Regulatory** | `/network` | • Midnight Testnet Block Height<br>• Compact Contract State (13,114 bytes)<br>• Cryptographic ZK-SNARK verifications | ❌ Zero raw health data (mathematically shielded) |
+
+---
+
+### Would you like us to activate the Role-Based Navigation?
+
+We can update the application header right now so that:
+1. **Role Switcher Dropdown**: Adds a selector in the header:
+   - 🔬 **Research Sponsor** (hides `/vault` completely, streamlines trial publication)
+   - 🏥 **Hospital Network** (locks view to feasibility check & private EHR custody)
+   - 🌐 **Public Auditor** (focuses on ledger blocks & contract explorer)
+2. **Multi-Hospital Switcher**: Allows selecting between **Demo Hospital A** and a new **Hospital Site B** to demonstrate multi-site recruitment!

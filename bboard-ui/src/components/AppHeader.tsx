@@ -51,9 +51,16 @@ export const AppHeader: React.FC = () => {
         </nav>
 
         <div className="header-actions">
-          <span className="network">
+          <a
+            href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="network"
+            title={`Active Contract: ${MIDNIGHT_CONFIG.contractAddress}\nClick to inspect on Midnight Preview Explorer`}
+            style={{ textDecoration: 'none', cursor: 'pointer' }}
+          >
             <i /> {MIDNIGHT_CONFIG.networkLabel}
-          </span>
+          </a>
           <button
             type="button"
             className={`wallet-button ${walletSession ? 'connected' : ''}`}

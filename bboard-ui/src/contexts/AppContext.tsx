@@ -9,7 +9,7 @@ import { fetchDynamicHospitalCodes, type DynamicIcdOption } from '../config/icdR
 
 interface AppContextValue {
   walletSession: WalletSession | null;
-  connectWallet: () => Promise<void>;
+  connectWallet: () => Promise<WalletSession | null>;
   disconnectWallet: () => void;
   toggleWallet: () => Promise<void>;
   isWalletInstalled: boolean;
@@ -81,13 +81,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // User-initiated wallet connect (modal/Lace prompt)
-  const connectWallet = useCallback(async () => {
+  const connectWallet = useCallback(async (): Promise<WalletSession | null> => {
     try {
       const session = await connectMidnightWallet();
       // Keep strictly in React memory — zero disk persistence
       setWalletSession(session);
+      return session;
     } catch (err) {
       console.warn('Wallet connection note:', err);
+      return null;
     }
   }, []);
 

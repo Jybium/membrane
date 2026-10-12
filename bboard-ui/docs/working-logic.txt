@@ -1,0 +1,76 @@
+Viewed demo.a.hospital.data.controller.ts:1-55
+Viewed demo.a.hospital.data.service.ts:60-100
+Viewed HospitalEhrView.tsx:1-100
+Viewed EhrVaultPage.tsx:150-273
+
+### 1. How It Works Under the Hood
+
+Membrane operates on an **air-gapped, zero-knowledge architecture** built on the **Midnight Network**. Here is the exact lifecycle of what just happened on your screen:
+
+```
+┌─────────────────────────────────┐                 ┌─────────────────────────────────┐
+│     RESEARCH LAB (Public)       │                 │       HOSPITAL (Private)        │
+│                                 │                 │                                 │
+│ • Creates Trial Predicate       │                 │ • Air-gapped EHR Database       │
+│ • Disease: ICD-10 K30           │                 │ • Patients never leave hospital │
+│ • Age Range: 35–70 yrs          │                 │                                 │
+│ • Min Cohort Threshold: ≥ 15    │                 │ Local Evaluation:               │
+│                                 │                 │ 18 matching consented records   │
+└────────────────┬────────────────┘                 └────────────────┬────────────────┘
+                 │                                                   │
+                 ▼                                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                       MIDNIGHT PROOF SERVER (ws://localhost:6300)                  │
+│                                                                                     │
+│ 1. Private Witness: getHospitalPatientsAggregate() = 18                             │
+│ 2. Public Inputs:   trialIdHash, minPatientSampleCount = 15                         │
+│ 3. Compact Circuit: assert(witnessAggregate >= minPatientSampleCount)               │
+│ 4. Output:          256-byte ZK-SNARK Proof (Reveals NO patient IDs, ages, or PHI)  │
+└──────────────────────────────────────────┬──────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                      MIDNIGHT PREVIEW TESTNET (On-Chain Ledger)                     │
+│                                                                                     │
+│ • Contract: e03c6abcd309f053d96913999e6ea2ba5ce3b15386860f039e2c9e65e69d03e3       │
+│ • Circuit:  trialEnrollment(trialIdHash)                                            │
+│ • Result:   Proof validated cryptographically. Hospital enrolled in block!          │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### The 4 Specific Steps You Saw in the Modal:
+1. **Witness Private State**: 
+   The hospital query ran **locally inside the hospital perimeter**. It counted matching patients (`18 records ≥ 15 required`) without sending raw medical records, names, or individual ages over the internet.
+2. **ZK Proof Server (`:6300`)**: 
+   The witness count (`18`) was fed into Midnight's private witness circuit (`witness getHospitalPatientsAggregate(): Uint<16>`). The proof server compiled an R1CS zero-knowledge constraint proving `18 ≥ 15` is mathematically true.
+3. **Lace Wallet Balancing**: 
+   The hospital's Midnight Lace Wallet balanced unshielded dust fees and signed the transaction header without revealing private witness data.
+4. **Midnight Node Ledger**: 
+   The shielded transaction containing the 256-byte ZK proof was submitted to the Midnight Preview testnet. Midnight validators confirmed that the hospital satisfied the recruitment criteria and registered the enrollment on the ledger.
+
+---
+
+### 2. How Hospitals Change or Register Their Available Samples
+
+In Membrane's privacy model, hospital data stays **strictly institutional**:
+
+#### A. Institutional EHR Vault (`/vault`)
+- Click **Consented EHR Vault** in the top navigation bar.
+- This represents the hospital's internal electronic health records system.
+- Hospitals filter and inspect their consented patient inventory by diagnosis (e.g., ICD-10 `K30`, `C34`, `J45`, `E11`), age brackets, and consent status.
+
+#### B. Production Integration (FHIR / Hospital Database)
+In an enterprise hospital deployment:
+1. **Local Hospital Database / EHR Connectors**: The hospital connects their existing database (PostgreSQL, MySQL) or hospital health information system (Epic / Cerner via HL7 FHIR APIs).
+2. **Patient Consent Registry**: When patients sign research consent forms, their anonymized records are tagged with a research consent flag.
+3. **Automated Predicate Queries**: When research labs publish study requirements, the hospital's local Docker daemon automatically queries internal tables (`SELECT COUNT(*) FROM patients WHERE icd = ? AND age BETWEEN ? AND ? AND consented = true`).
+4. **No Centralized Data Repository**: A research lab never gets direct access to the database; they only receive the cryptographic proof.
+
+---
+
+### Would you like an "Add / Register Patient" feature in the Vault?
+
+We can add an **interactive "+ Register Consented Patient"** modal directly to the **[Consented EHR Vault](/vault)** page so that you can:
+- Add custom patient records on the fly (specify Patient ID, Age, Gender, and ICD Diagnosis).
+- Save them directly to the hospital's local vault.
+- Immediately test how adding or changing patient records alters the hospital's qualification in the trial verification screen!

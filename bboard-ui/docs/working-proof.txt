@@ -1,0 +1,114 @@
+Viewed membrane.compact:1-100
+Viewed membrane.compact:101-178
+
+Here is the exact cryptographic and architectural mechanism that allows the system to distinguish between **Hospital A, Hospital B, Hospital C**, and the **Research Lab** without ever mixing or exposing their data.
+
+---
+
+### 1. The Core Principle: Nothing is Centralized
+
+In a traditional web application, all hospitals upload their data to one central database with a `hospital_id` column. If a query is written wrong, data leaks.
+
+**Membrane does not have a central database of patient records.**
+
+Instead, data isolation is guaranteed at **three independent layers**:
+
+```
+┌─────────────────────────────────┐       ┌─────────────────────────────────┐
+│     HOSPITAL A (Private Node)   │       │     HOSPITAL B (Private Node)   │
+│                                 │       │                                 │
+│ • Database: Hosp A Internal EHR │       │ • Database: Hosp B Internal EHR │
+│ • Wallet Key: PrivateKey_A      │       │ • Wallet Key: PrivateKey_B      │
+│ • Tag: Hash(Identity, Key_A)    │       │ • Tag: Hash(Identity, Key_B)    │
+│ • Local Witness: 18 patients    │       │ • Local Witness: 24 patients    │
+└────────────────┬────────────────┘       └────────────────┬────────────────┘
+                 │                                         │
+                 │ 256-byte ZK Proof                       │ 256-byte ZK Proof
+                 │ (No PHI, No Raw Count)                  │ (No PHI, No Raw Count)
+                 ▼                                         ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                       MIDNIGHT ON-CHAIN SMART CONTRACT                    │
+│                                                                           │
+│ activeTrials:                                                             │
+│   • Trial CT-76BC: Min Cohort ≥ 15, Created by Lab_KeyHash                │
+│                                                                           │
+│ trialsEnrollments: Map<TrialId, Set<HospitalTags>>                        │
+│   • Trial CT-76BC ──► Set { HospitalTag_A, HospitalTag_B }                │
+└─────────────────────────────────────▲─────────────────────────────────────┘
+                                      │
+                       ┌──────────────┴──────────────┐
+                       │  RESEARCH LAB (Sponsor Hub) │
+                       │                             │
+                       │ • Wallet Key: PrivateKey_Lab│
+                       │ • Sees: 2 Qualified Sites   │
+                       │ • ZERO access to A or B EHR │
+                       └─────────────────────────────┘
+```
+
+---
+
+### 2. How the Smart Contract Distinguishes Participants
+
+In [`contract/membrane.compact`](file:///c:/Users/dell/software-engineering/projects/membrane/contract/membrane.compact), cryptographic identity derivation prevents identity spoofing and data mingling:
+
+#### A. Distinct Cryptographic Tags
+Every participant has their own private key held in their local Midnight wallet:
+```compact
+export circuit derivePublicKey(privateKey: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "membrane:identity"), privateKey]);
+}
+```
+- **Research Lab**: `derivedPublicKey` becomes the immutable `researchLabIdHash`. Only this key can cancel or close the trial.
+- **Hospital A**: Derives `hospitalPublicTag_A`.
+- **Hospital B**: Derives `hospitalPublicTag_B`.
+
+#### B. The Membership Set (`trialsEnrollments`)
+When Hospital A proves eligibility, the Midnight circuit executes:
+```compact
+export circuit trialEnrollment(trialIdHash: Bytes<32>): Boolean {
+  const patientAggregateCount = getHospitalPatientsAggregate(); // Local private witness
+
+  // 1. Checks that Hospital A's internal count meets the criteria
+  assert(patientAggregateCount >= activeTrials.lookup(publicTrialId).minPatientSampleCount);
+
+  // 2. Inserts ONLY Hospital A's cryptographic public tag into the trial's enrollment set
+  const hospitalPublicTag = disclose(derivedPublicKey);
+  trialsEnrollments.lookup(publicTrialId).insert(hospitalPublicTag);
+
+  // 3. Increments total enrolled hospitals count (+1)
+  activeTrials.lookup(publicTrialId).enrolledCount += 1;
+  return true;
+}
+```
+
+#### What happens on-chain:
+- **Hospital A** is registered as a unique cryptographic member in `trialsEnrollments`.
+- **Hospital B** is registered as an independent member in `trialsEnrollments`.
+- **Neither hospital's patient database ever meets the other's.**
+- The Research Lab sees `enrolledCount: 2`, knowing that two verified, distinct clinical institutions have proven they have the required cohorts, with mathematical certainty.
+
+---
+
+### 3. How the Web Application Separates Views and Flows
+
+The application separates roles by **Cryptographic Session** and **Portal Route**:
+
+| Persona | Active Route | Connected Context | Data Access Boundary |
+| :--- | :--- | :--- | :--- |
+| **Research Lab** | `/lab` | Sponsor Wallet Session (`mn_lab...`) | Reads public criteria & trial state. Cannot access any hospital vault or query patient records. |
+| **Hospital A** | `/hospital`<br>`/vault` | Hospital A Node (`Demo Hospital A`) | Queries only Hospital A's internal EHR. Generates proofs using Hospital A's local proof server. |
+| **Hospital B** | `/hospital`<br>`/vault` | Hospital B Node (`Hospital Site B`) | Queries only Hospital B's internal EHR. Cannot view Hospital A's records. |
+| **Public Auditor** | `/network` | Verifier Session | Read-only inspection of the Midnight blockchain ledger, block height, and ZK-SNARK verifications. |
+
+---
+
+### 4. Interactive Role & Hospital Switching in the App
+
+In [`bboard-ui/src/components/PortalSwitcherDialog.tsx`](file:///c:/Users/dell/software-engineering/projects/membrane/bboard-ui/src/components/PortalSwitcherDialog.tsx), role switching is already structured:
+- `research-lab`: Research Sponsor Studio
+- `hospital`: Healthcare Provider Portal
+- `ledger-explorer`: Ledger & Protocol Auditor
+
+We can add a **Site & Role Selector** directly to the top header (`AppHeader.tsx`):
+1. **Role Switcher**: Click to toggle between **🔬 Research Sponsor** (hides `/vault` tab completely) and **🏥 Hospital Site**.
+2. **Hospital Site Switcher**: When in Hospital mode, toggle between **Demo Hospital A (Cardiology/Oncology)** and **Hospital Site B (Pediatrics/Respiratory)** to test multi-site enrollment!

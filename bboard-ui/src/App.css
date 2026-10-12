@@ -1083,6 +1083,49 @@ input:focus {
   color: #7a460c;
 }
 
+.onchain-contract-anchor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 7px;
+  margin-bottom: 14px;
+  font-size: 8.5px;
+  background: rgba(26, 42, 57, 0.04);
+  border: 1px solid var(--brand-border);
+  color: var(--brand-navy);
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+}
+
+.onchain-contract-anchor code {
+  font-family: monospace;
+  font-size: 8.5px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.onchain-contract-anchor a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--brand-blue);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 8.5px;
+}
+
+.onchain-contract-anchor a:hover {
+  color: var(--brand-blue-hover);
+  text-decoration: underline;
+}
+
+.onchain-contract-anchor a svg {
+  width: 10px;
+  height: 10px;
+}
+
 .proof-server-info {
   display: flex;
   align-items: center;
@@ -1272,6 +1315,76 @@ input:focus {
 .result.not-qualified > span {
   color: white;
   background: #A8761E;
+}
+
+/* On-Chain Transaction Hash Box */
+.tx-hash-box {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tx-hash-box .tx-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #065f46;
+}
+
+.tx-hash-box code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  color: #047857;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.tx-hash-box .tx-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tx-hash-box .tx-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.tx-hash-box .tx-btn:hover {
+  background: #059669;
+  color: white;
+}
+
+.tx-hash-box .tx-btn.secondary {
+  background: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tx-hash-box .tx-btn.secondary:hover {
+  background: rgba(16, 185, 129, 0.25);
+  color: #047857;
 }
 
 /* Landing page */

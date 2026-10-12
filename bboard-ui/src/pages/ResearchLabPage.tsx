@@ -7,7 +7,16 @@ import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
 import { getMembraneContract } from '../midnight/contract';
-import { isContractConfigured } from '../midnight/config';
+import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
+import { subscribeOnchainContract, type OnchainContractState } from '../midnight/onchainLedger';
+import {
+  checkProofServer,
+  subscribeProofServer,
+  initProofServerAutoDetection,
+  setSimulatedProver,
+  type ProofServerState,
+} from '../midnight/proofServer';
+import { useMembrane } from '../contexts/MembraneContext';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -54,7 +63,40 @@ export const ResearchLabPage: React.FC = () => {
   });
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { walletSession, connectWallet, dynamicCodes } = useApp();
+  const { walletSession, connectWallet, isWalletInstalled, dynamicCodes } = useApp();
+  const { setZkStatus } = useMembrane();
+
+  const [onchainState, setOnchainState] = useState<OnchainContractState>({
+    address: MIDNIGHT_CONFIG.contractAddress,
+    isDeployed: true,
+    stateBytesLength: 0,
+    lastChecked: null,
+    status: 'checking',
+  });
+
+  useEffect(() => {
+    const unsub = subscribeOnchainContract((st) => setOnchainState(st));
+    return unsub;
+  }, []);
+
+  const [proofServer, setProofServer] = useState<ProofServerState>({
+    status: 'checking',
+    uri: 'http://localhost:6300',
+    isSimulated: false,
+    lastChecked: null,
+  });
+
+  // Real-time automatic detection and subscription for local proof server
+  useEffect(() => {
+    const stopAuto = initProofServerAutoDetection(12000);
+    const unsub = subscribeProofServer((state) => {
+      setProofServer(state);
+    });
+    return () => {
+      stopAuto();
+      unsub();
+    };
+  }, []);
 
   // Read state from URL query parameters with fallbacks
   const urlIcd = searchParams.get('icd') || 'K30';
@@ -76,6 +118,16 @@ export const ResearchLabPage: React.FC = () => {
   const [trials, setTrials] = useState<ApiRecord[]>([]);
   const [trialStatuses, setTrialStatuses] = useState<Record<string, boolean>>({});
   const [deactivatingHex, setDeactivatingHex] = useState<string | null>(null);
+
+  const [lastTxHash, setLastTxHash] = useState<string>('');
+  const [lastTxType, setLastTxType] = useState<'create' | 'cancel' | null>(null);
+  const [copiedTx, setCopiedTx] = useState<boolean>(false);
+
+  const copyTxHash = (hash: string) => {
+    void navigator.clipboard.writeText(hash);
+    setCopiedTx(true);
+    setTimeout(() => setCopiedTx(false), 2000);
+  };
 
   // Keep state synchronized with URL query params
   const updateUrlParams = useCallback(
@@ -143,16 +195,54 @@ export const ResearchLabPage: React.FC = () => {
     if (!hex) return;
     setDeactivatingHex(hex);
     setMessage('');
+
+    if (proofServer.status !== 'online') {
+      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute the trial cancellation proof.`;
+      setMessage(errMsg);
+      setZkStatus({
+        step: 'failed',
+        message: errMsg,
+      });
+      setStatus('error');
+      setDeactivatingHex(null);
+      return;
+    }
+
+    setZkStatus({
+      step: 'signing',
+      message: `Requesting Midnight Lace signature to deactivate trial CT-${hex.slice(0, 10).toUpperCase()}…`,
+    });
     try {
-      const contract = await getMembraneContract(walletSession);
-      await contract.cancelTrial(hex);
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && isWalletInstalled) {
+        try {
+          const fresh = await connectWallet();
+          if (fresh) sessionToUse = fresh;
+        } catch {
+          // ignore
+        }
+      }
+      const contract = await getMembraneContract(sessionToUse);
+      const res = await contract.cancelTrial(hex);
       setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
+      setLastTxHash(res.txId);
+      setLastTxType('cancel');
+      setZkStatus({
+        step: 'confirmed',
+        message: `Trial CT-${hex.slice(0, 10).toUpperCase()}… deactivated on Midnight smart contract.`,
+        txHash: res.txId,
+      });
       setMessage(
-        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was deactivated on Midnight smart contract. Recruitment closed.`,
+        `Trial CT-${hex.slice(0, 10).toUpperCase()}… was signed and deactivated on Midnight smart contract. Recruitment closed.`,
       );
       setStatus('success');
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not deactivate trial.');
+      const errText = err instanceof Error ? err.message : 'Could not deactivate trial.';
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
       setStatus('error');
     } finally {
       setDeactivatingHex(null);
@@ -191,31 +281,62 @@ export const ResearchLabPage: React.FC = () => {
   };
 
   const publish = async () => {
+    // Require proof server to be online (or simulated enclave enabled)
+    if (proofServer.status !== 'online') {
+      setStatus('error');
+      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to synthesize zero-knowledge circuit proofs for trial creation.`;
+      setMessage(errMsg);
+      setZkStatus({
+        step: 'failed',
+        message: errMsg,
+      });
+      return;
+    }
+
     setStatus('loading');
     setMessage('');
 
+    setZkStatus({
+      step: 'generating-proof',
+      message: 'Synthesizing createTrial circuit constraint system for clinical study...',
+    });
+
     let hexId = '';
+    let txHash = '';
 
     try {
       const minCohortNum = Math.max(1, parseInt(minimum, 10) || 10);
       const minAgeNum = Math.max(0, parseInt(minAge, 10) || 40);
       const maxAgeNum = Math.max(0, parseInt(maxAge, 10) || 65);
 
-      // 1. If Midnight wallet is connected, invoke createTrial circuit defined in membrane.compact
-      if (walletSession && isContractConfigured()) {
+      setZkStatus({
+        step: 'signing',
+        message: 'Requesting transaction review & signature in Midnight Lace Wallet...',
+      });
+
+      // 1. Ensure wallet session is active and invoke createTrial circuit
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && isWalletInstalled) {
         try {
-          const contract = await getMembraneContract(walletSession);
-          const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
-          hexId = result.trialHexId;
-        } catch (contractErr) {
-          console.warn('Smart contract publish fallback:', contractErr);
+          const fresh = await connectWallet();
+          if (fresh) sessionToUse = fresh;
+        } catch {
+          // ignore
         }
       }
 
-      if (!hexId) {
-        const bytes = crypto.getRandomValues(new Uint8Array(20));
-        hexId = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-      }
+      const contract = await getMembraneContract(sessionToUse);
+      const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
+      hexId = result.trialHexId;
+      txHash = result.txId;
+
+      setLastTxHash(txHash);
+      setLastTxType('create');
+
+      setZkStatus({
+        step: 'submitting',
+        message: 'Broadcasting transaction to Midnight node and indexing in auxiliary database...',
+      });
 
       // 2. Index the created on-chain trial in the auxiliary API DB
       await apiRequest('/clinical-trials/index', {
@@ -228,11 +349,21 @@ export const ResearchLabPage: React.FC = () => {
 
       setTrialHexId(hexId);
       updateUrlParams({ trial: hexId });
+      setZkStatus({
+        step: 'confirmed',
+        message: `Trial published to Midnight Ledger & indexed! ID: CT-${hexId.slice(0, 12).toUpperCase()}…`,
+        txHash,
+      });
       setStatus('success');
       await loadTrials();
     } catch (error) {
+      const errText = error instanceof Error ? error.message : 'Could not publish and index request.';
       setStatus('error');
-      setMessage(error instanceof Error ? error.message : 'Could not publish and index request.');
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
     }
   };
 
@@ -262,6 +393,67 @@ export const ResearchLabPage: React.FC = () => {
               </div>
             </div>
             <b>Public Predicate</b>
+          </div>
+
+          {/* Proof Server Real-time Detection Banner */}
+          <div className={`proof-server-banner ${proofServer.status}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span className="beacon-dot" />
+              <div>
+                <strong>Local Proof Server: </strong>
+                <small>{proofServer.message || proofServer.uri}</small>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void checkProofServer()}
+                style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+              >
+                Recheck
+              </button>
+              {/* <button
+                type="button"
+                className="text-button"
+                onClick={() => setSimulatedProver(!proofServer.isSimulated)}
+                title="Toggle simulated enclave if Docker proof server is not running locally"
+                style={{
+                  fontSize: '0.76rem',
+                  padding: '4px 8px',
+                  color: proofServer.isSimulated ? '#10b981' : '#64748b',
+                  fontWeight: proofServer.isSimulated ? 600 : 400,
+                }}
+              >
+                {proofServer.isSimulated ? 'Simulated Enclave [ON]' : 'Enable Simulated Enclave'}
+              </button> */}
+            </div>
+          </div>
+
+          {/* On-Chain Midnight Testnet Contract Anchor */}
+          <div className="onchain-contract-anchor">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`beacon-dot ${onchainState.isDeployed ? 'online' : 'checking'}`} />
+              <div>
+                <strong>Midnight Smart Contract: </strong>
+                <code>
+                  {MIDNIGHT_CONFIG.contractAddress.slice(0, 10)}…{MIDNIGHT_CONFIG.contractAddress.slice(-8)}
+                </code>
+                {onchainState.latestBlockHeight && (
+                  <span style={{ marginLeft: 6, color: '#4E93B4' }}>
+                    • Block #{onchainState.latestBlockHeight.toLocaleString()} Verified
+                  </span>
+                )}
+              </div>
+            </div>
+            <a
+              href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Inspect smart contract on Midnight Preview Explorer"
+            >
+              Explorer <Arrow />
+            </a>
           </div>
 
           <div className="fields">
@@ -311,12 +503,19 @@ export const ResearchLabPage: React.FC = () => {
             <button
               type="button"
               onClick={walletSession ? publish : connectWallet}
-              disabled={status === 'loading' || !diseaseCode}
+              disabled={status === 'loading' || !diseaseCode || proofServer.status === 'checking'}
+              title={
+                proofServer.status === 'offline'
+                  ? 'Local proof server is offline — cannot synthesize ZK proof'
+                  : undefined
+              }
             >
               {status === 'loading'
                 ? 'Publishing & Indexing…'
                 : walletSession
-                  ? 'Publish & Index Request'
+                  ? proofServer.status === 'offline'
+                    ? 'Proof Server Offline — Cannot Publish'
+                    : 'Publish & Index Request'
                   : 'Connect Wallet to Publish'}
               <Arrow />
             </button>
@@ -333,8 +532,74 @@ export const ResearchLabPage: React.FC = () => {
 
           {trialHexId && (
             <div className="notice success">
-              Request published & indexed: <code>CT-{trialHexId.slice(0, 12).toUpperCase()}…</code> ({diseaseCode} —{' '}
-              {getDiseaseName(diseaseCode)})
+              <div>
+                Request published & indexed: <code>CT-{trialHexId.slice(0, 12).toUpperCase()}…</code> ({diseaseCode} —{' '}
+                {getDiseaseName(diseaseCode)})
+              </div>
+              {lastTxHash && lastTxType === 'create' && (
+                <div className="tx-hash-box">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                    <span className="beacon-dot online" />
+                    <span className="tx-label">Midnight Tx:</span>
+                    <code title={lastTxHash}>
+                      {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
+                    </code>
+                  </div>
+                  <div className="tx-actions">
+                    <button
+                      type="button"
+                      className="tx-btn secondary"
+                      onClick={() => copyTxHash(lastTxHash)}
+                      title="Copy full transaction hash"
+                    >
+                      {copiedTx ? 'Copied!' : 'Copy'}
+                    </button>
+                    <a
+                      href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tx-btn"
+                      title="View transaction on Midnight Preview Explorer"
+                    >
+                      Explorer ↗
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {lastTxHash && lastTxType === 'cancel' && (
+            <div className="notice success" style={{ marginTop: '12px' }}>
+              <div>{message}</div>
+              <div className="tx-hash-box">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                  <span className="beacon-dot online" />
+                  <span className="tx-label">Cancellation Tx:</span>
+                  <code title={lastTxHash}>
+                    {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
+                  </code>
+                </div>
+                <div className="tx-actions">
+                  <button
+                    type="button"
+                    className="tx-btn secondary"
+                    onClick={() => copyTxHash(lastTxHash)}
+                    title="Copy full transaction hash"
+                  >
+                    {copiedTx ? 'Copied!' : 'Copy'}
+                  </button>
+                  <a
+                    href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tx-btn"
+                    title="View transaction on Midnight Preview Explorer"
+                  >
+                    Explorer ↗
+                  </a>
+                </div>
+              </div>
             </div>
           )}
         </section>
