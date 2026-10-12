@@ -35,9 +35,10 @@ globalThis.WebSocket = WebSocket;
 // Identifier under which this contract's private state is stored. 
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
-
-const contractAddress = "f3f879471a37ae9485f9816289b79dd76329b48620f5b3b03229072a1fe8cc3d"
-
+const contractAddress =
+  process.env.VITE_MEMBRANE_CONTRACT_ADDRESS ||
+  process.env.CONTRACT_ADDRESS ||
+  'e03c6abcd309f053d96913999e6ea2ba5ce3b15386860f039e2c9e65e69d03e3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const zkConfigPath = path.resolve(__dirname, '..', 'compiled', 'membrane');
@@ -360,7 +361,10 @@ const trialIdBytes = Buffer.from(
 
 // =================== MEMBRANE CONTRACT CALLS WITH API INDEXING  ==========================
 
-const membraneBaseUrl = "http://localhost:3000/v1/"
+const membraneBaseUrl =
+  process.env.VITE_MEMBRANE_API_URL ||
+  process.env.MEMBRANE_API_BASE_URL ||
+  'https://membrane-api.onrender.com/v1/';
 
 
 async function createAndIndexTrial(

@@ -1,0 +1,122 @@
+Viewed proofServer.ts:90-144
+Viewed HospitalPage.tsx:480-560
+Searched for "enrollInTrial"
+Searched for "verify"
+Searched for "const handle"
+Viewed HospitalPage.tsx:200-300
+Viewed HospitalPage.tsx:301-380
+Searched for "proofServer"
+Viewed wallet.ts:100-186
+Viewed contract.ts:1-100
+Viewed proof-server-local.yml:1-8
+Listed directory src
+Viewed config.ts:1-60
+Viewed config.ts:61-121
+
+In Midnight Network, zero-knowledge proofs are generated **client-side** (at the data edge) so that private witnesses (such as confidential patient EHR counts or secret spending keys) never leave the user's custody.
+
+Here is how you handle the local proof server for each type of user in development, live deployment, and production.
+
+---
+
+### 1. Who Needs a Proof Server and Why?
+
+| User Type | What They Prove | Does It Contain Protected Health Information (PHI)? | Recommended Setup |
+| :--- | :--- | :--- | :--- |
+| **Hospital Site** | "My local EHR has $\ge N$ consented patients matching ICD-10 criteria" | **YES (Strictly Confidential)** | **Air-gapped on-premise container** (Docker inside hospital intranet) |
+| **Research Lab (Sponsor)** | "I own this trial and authorize creating or closing it" | **NO (Only cryptographic signatures & criteria)** | **Hosted Prover Gateway** or Local Docker |
+| **Auditor / Public User** | Read-only ledger verification | **NO** (No proofs generated, only verified on-chain) | **None required** |
+
+---
+
+### 2. The 3 Deployment Approaches
+
+#### Approach A: Institutional On-Premise Container (For Hospitals)
+In compliance with HIPAA and GDPR, hospital patient databases **can never send data to an external cloud server**. The proof server runs locally right next to their EHR.
+
+The hospital IT team runs a lightweight Docker container on their local server or workstation:
+
+```bash
+docker run -d \
+  --name hospital-proof-server \
+  --restart unless-stopped \
+  -p 6300:6300 \
+  midnightntwrk/proof-server:8.0.3 \
+  midnight-proof-server -v
+```
+
+- **How the app connects**:
+  - The hospital portal queries the local database: `patientCount = 18`.
+  - The browser/agent calls `http://localhost:6300` with the private witness.
+  - The proof server generates the 256-byte ZK proof locally in ~2–4 seconds.
+  - Only the proof is transmitted to the Midnight blockchain.
+
+---
+
+#### Approach B: Hosted Prover Gateway (For Research Labs & Live DApps)
+Because the **Research Lab** only signs trial parameters (ICD code, age range, min cohort) and does **not** handle patient records, they don't have to mandate Docker on every researcher's laptop.
+
+You can deploy a centralized proof server for non-PHI actions behind an HTTPS reverse proxy (e.g. AWS ECS, GCP Cloud Run, or a VPS):
+
+```nginx
+# Nginx Reverse Proxy config (prover.membrane.network)
+server {
+    listen 443 ssl;
+    server_name prover.membrane.network;
+
+    location / {
+        proxy_pass http://127.0.0.1:6300;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        
+        # CORS headers for web dApp access
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS';
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization';
+    }
+}
+```
+
+In `.env.preview` or the UI config:
+```env
+VITE_PROOF_SERVER_URI=https://prover.membrane.network
+```
+
+---
+
+#### Approach C: The Built-in Membrane Dual-Mode (Already in the UI)
+To make Membrane work out-of-the-box for any user—whether they have Docker running or not—we implemented a **Dual-Mode Prover Architecture** in [`bboard-ui/src/midnight/proofServer.ts`](file:///c:/Users/dell/software-engineering/projects/membrane/bboard-ui/src/midnight/proofServer.ts):
+
+1. **Auto-Detection (`http://localhost:6300`)**:
+   - The UI automatically pings port `6300` every 15 seconds.
+   - If a real Docker proof server is running, the badge turns green: `Active on http://localhost:6300 (4ms)`.
+2. **Simulated Browser Enclave (1-Click Toggle)**:
+   - If a hospital coordinator or evaluator does not have Docker installed, they click **"Enable Simulated Enclave"** right on the hospital panel.
+   - The application computes the witness constraint check (`assert(patientCount >= minCohort)`) in browser memory, derives the transaction commitment, and submits to Midnight Preview Testnet without errors.
+
+---
+
+### 3. Step-by-Step: How to Run the Local Proof Server Today
+
+If you or a user want to run the real Midnight proof server right now on your machine:
+
+1. **Start the container**:
+   ```bash
+   docker run -d --name proof-server -p 6300:6300 midnightntwrk/proof-server:8.0.3 midnight-proof-server -v
+   ```
+2. **Verify it is running**:
+   ```bash
+   curl http://127.0.0.1:6300
+   ```
+3. **Open the Hospital Page** in your browser (`http://localhost:5173/hospital`):
+   - You will see the **Local Proof Server** beacon turn green:
+     `🟢 Active on http://localhost:6300 (12ms)`
+   - When you click **"Generate ZK Proof & Enroll"**, the cryptographic proof is computed directly by your local Docker container.
+
+---
+
+### Summary Recommendation for Your Product Roadmap
+
+1. **For Production Hospitals**: Provide the 1-line `docker-compose.yml` that pairs the `midnightntwrk/proof-server` with their read-only FHIR/SQL adapter behind their hospital firewall.
+2. **For Research Labs & Live Demo**: Host a remote prover endpoint (e.g. `https://prover.membrane.network`) so researchers can create trials from any browser without installing Docker.
+3. **For Evaluators & Hackathons**: Keep the **Simulated Browser Enclave** fallback enabled so anyone can test the full end-to-end flow immediately.
