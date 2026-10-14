@@ -149,7 +149,6 @@ On first boot the server seeds synthetic patients into the database. Subsequent 
 ## Limitations
 
 - **Witness honesty is not enforced by the proof.** The proof guarantees the circuit's constraints were satisfied by *some* witness, not that the hospital's reported count reflects its real database. A production system would need attested hospital credentials and periodic audits.
-- Eligibility matching is currently at the ICD-10 category level (e.g. `E11`), not subcodes.
 - Demo data is synthetic and randomly generated.
 
 
