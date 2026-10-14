@@ -36,7 +36,10 @@ globalThis.WebSocket = WebSocket;
 const PRIVATE_STATE_ID = 'membranePrivateState';
 
 
-const contractAddress = "f3f879471a37ae9485f9816289b79dd76329b48620f5b3b03229072a1fe8cc3d"
+const contractAddress = "c8b9c466619776ab121c980f5cc2b8935c3e51f35e2e991efb8f4735f3ffe0be" // local contract address
+// const contractAddress = "e03c6abcd309f053d96913999e6ea2ba5ce3b15386860f039e2c9e65e69d03e3" //preview contract address
+// const contractAddress = "f3f879471a37ae9485f9816289b79dd76329b48620f5b3b03229072a1fe8ffff" //fake contract address
+
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -200,7 +203,7 @@ async function createTrial(
 
 async  function getLatestActiveTrials(){
   // Assuming contractLedgerData is the complete ledger from contractState.data
-console.log("--- Latest Inputed ---");
+  console.log("--- Latest Inputed ---");
 
   // this returns the latest inputted active trial. you cannot directly return a whole value of a Map<k,v> ledger state-type 
   for (const [trialHash, registry] of contractLedgerData.activeTrials) {
@@ -348,7 +351,7 @@ const trialIdBytes = Buffer.from(
 
 // Membrane contract calls
 
-// await createTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
+await createTrial("ICD-001", 12n, 15n, 200n, researchLabPrivateData)
 // await getLatestActiveTrials()
 // await cancelTrial(researchLabPrivateData)
 // await trialEnrollment(trialIdBytes, hospitalPrivateData)
