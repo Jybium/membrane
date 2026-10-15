@@ -47,8 +47,13 @@ export interface MidnightExtensionProvider {
  */
 export function getMidnightProvider(): MidnightExtensionProvider | null {
   if (typeof window === 'undefined') return null;
-  const win = window as unknown as { midnight?: Record<string, MidnightExtensionProvider> };
-  if (!win.midnight || typeof win.midnight !== 'object') return null;
+  const win = window as unknown as { midnight?: Record<string, MidnightExtensionProvider>; midnightLace?: MidnightExtensionProvider };
+  if (!win.midnight || typeof win.midnight !== 'object') {
+    if (win.midnightLace && typeof win.midnightLace === 'object') {
+      return win.midnightLace;
+    }
+    return null;
+  }
 
   // Prioritize Lace (mnLace or lace) if specifically registered
   if (win.midnight.mnLace && typeof win.midnight.mnLace === 'object') {
@@ -57,18 +62,38 @@ export function getMidnightProvider(): MidnightExtensionProvider | null {
   if (win.midnight.lace && typeof win.midnight.lace === 'object') {
     return win.midnight.lace;
   }
+  if (win.midnight['midnight-lace'] && typeof win.midnight['midnight-lace'] === 'object') {
+    return win.midnight['midnight-lace'];
+  }
 
   // Otherwise pick any Midnight-compliant provider
-  const providers = Object.values(win.midnight);
-  return (
-    providers.find((w) =>
-      Boolean(
-        w &&
-        typeof w === 'object' &&
-        (w.apiVersion || typeof w.connect === 'function' || typeof w.isEnabled === 'function'),
-      ),
-    ) || null
-  );
+  for (const val of Object.values(win.midnight)) {
+    if (
+      val &&
+      typeof val === 'object' &&
+      (typeof val.connect === 'function' || typeof val.enable === 'function' || typeof val.isEnabled === 'function')
+    ) {
+      return val;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Waits up to timeoutMs for the Midnight Lace extension to inject into window.midnight.
+ */
+export async function waitForMidnightProvider(timeoutMs = 1500): Promise<MidnightExtensionProvider | null> {
+  const immediate = getMidnightProvider();
+  if (immediate) return immediate;
+
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 100));
+    const detected = getMidnightProvider();
+    if (detected) return detected;
+  }
+  return null;
 }
 
 export function isWalletInstalled(): boolean {
@@ -95,7 +120,7 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
   if (typeof window === 'undefined') return null;
 
   try {
-    const provider = getMidnightProvider();
+    const provider = await waitForMidnightProvider(600);
     if (!provider) return null;
 
     // Check if user has already granted permission to this site in Midnight Lace
@@ -114,12 +139,16 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
     }
 
     // Origin is already authorized: silently acquire connected API
-    const api =
-      typeof provider.connect === 'function'
-        ? await provider.connect(MIDNIGHT_CONFIG.networkId)
-        : typeof provider.enable === 'function'
-          ? await provider.enable()
-          : null;
+    let api: any = null;
+    if (typeof provider.connect === 'function') {
+      try {
+        api = await provider.connect(MIDNIGHT_CONFIG.networkId);
+      } catch {
+        api = await provider.connect('');
+      }
+    } else if (typeof provider.enable === 'function') {
+      api = await provider.enable();
+    }
 
     if (!api) return null;
 
@@ -149,19 +178,21 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
     if (!address && unshieldedAddress) {
       address = unshieldedAddress;
     }
-
-    if (address || unshieldedAddress) {
-      return {
-        address: address || unshieldedAddress,
-        unshieldedAddress,
-        shieldedAddress,
-        uris: {
-          proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
-          indexerUri: MIDNIGHT_CONFIG.indexerUri,
-        },
-        api,
-      };
+    if (!address) {
+      address = 'mn_connected_wallet';
     }
+
+    return {
+      address,
+      unshieldedAddress,
+      shieldedAddress,
+      uris: {
+        proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
+        indexerUri: MIDNIGHT_CONFIG.indexerUri,
+      },
+      api,
+      isSimulated: false,
+    };
   } catch (err) {
     console.debug('Silent Midnight Lace reconnection check bypassed:', err);
   }
@@ -170,71 +201,9 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
 }
 
 /**
- * User-initiated wallet connection (e.g. clicking the "Connect wallet" button).
- * Invokes the Midnight Lace prompt if the extension is present.
- * If running without an extension in local sandbox, defaults to the preview session.
+ * Creates an in-memory simulated wallet session for dev and preview testing without the Lace extension.
  */
-export async function connectWallet(): Promise<WalletSession> {
-  if (typeof window !== 'undefined') {
-    const provider = getMidnightProvider();
-    if (provider) {
-      try {
-        const api =
-          typeof provider.connect === 'function'
-            ? await provider.connect(MIDNIGHT_CONFIG.networkId)
-            : typeof provider.enable === 'function'
-              ? await provider.enable()
-              : null;
-
-        if (api) {
-          let address = '';
-          let unshieldedAddress = '';
-          let shieldedAddress = '';
-
-          if (typeof api.getUnshieldedAddress === 'function') {
-            try {
-              const unshielded = await api.getUnshieldedAddress();
-              unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
-            } catch (e) {
-              console.debug('Error querying unshielded address:', e);
-            }
-          }
-
-          if (typeof api.getShieldedAddresses === 'function') {
-            try {
-              const state = await api.getShieldedAddresses();
-              shieldedAddress = state?.shieldedAddress || '';
-              address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
-            } catch (e) {
-              console.debug('Error querying shielded address:', e);
-            }
-          }
-
-          if (!address && unshieldedAddress) {
-            address = unshieldedAddress;
-          }
-
-          if (address || unshieldedAddress) {
-            return {
-              address: address || unshieldedAddress,
-              unshieldedAddress,
-              shieldedAddress,
-              uris: {
-                proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
-                indexerUri: MIDNIGHT_CONFIG.indexerUri,
-              },
-              api,
-            };
-          }
-        }
-      } catch (err) {
-        console.warn('Lace wallet connection prompt cancelled or failed:', err);
-        throw err;
-      }
-    }
-  }
-
-  // Realistic Sandbox Preview Session for dev & evaluation when Lace extension is not installed
+export function connectSimulatedWallet(): WalletSession {
   const mockAddresses = [
     'mn_shielded1q8v639420j88x0kltz99482hsa772km983ns002847a98',
     'mn_shielded1qy03mff2710398bb12984812aacc098112bb33445566',
@@ -246,5 +215,98 @@ export async function connectWallet(): Promise<WalletSession> {
       indexerUri: MIDNIGHT_CONFIG.indexerUri,
     },
     isSimulated: true,
+  };
+}
+
+/**
+ * User-initiated wallet connection (e.g. clicking the "Connect wallet" button).
+ * Invokes the Midnight Lace prompt if the extension is present.
+ */
+export async function connectWallet(): Promise<WalletSession> {
+  if (typeof window === 'undefined') {
+    throw new Error('Browser window environment required for wallet connection.');
+  }
+
+  // Allow up to 2 seconds for Lace extension content-script injection
+  const provider = await waitForMidnightProvider(2000);
+  if (!provider) {
+    console.warn('[Midnight Wallet] No Midnight Lace provider found in window.midnight.');
+    throw new Error(
+      'Midnight Lace wallet extension was not detected. Please ensure Midnight Lace is installed in your browser, enabled for this site, and unlocked.',
+    );
+  }
+
+  console.log('[Midnight Wallet] Initiating connection via Midnight Lace provider...', provider);
+
+  let api: any = null;
+  try {
+    if (typeof provider.connect === 'function') {
+      try {
+        api = await provider.connect(MIDNIGHT_CONFIG.networkId);
+      } catch (err: any) {
+        console.warn(
+          `[Midnight Wallet] connect('${MIDNIGHT_CONFIG.networkId}') failed, retrying without network hint:`,
+          err,
+        );
+        api = await provider.connect('');
+      }
+    } else if (typeof provider.enable === 'function') {
+      api = await provider.enable();
+    }
+  } catch (err: any) {
+    console.error('[Midnight Wallet] provider.connect rejected or failed:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/cancel|reject|denied|declined/i.test(msg)) {
+      throw new Error('Connection request was cancelled in Midnight Lace wallet.');
+    }
+    throw new Error(`Midnight Lace connection error: ${msg}`);
+  }
+
+  if (!api) {
+    throw new Error('Midnight Lace wallet responded but did not provide a connected API instance.');
+  }
+
+  let address = '';
+  let unshieldedAddress = '';
+  let shieldedAddress = '';
+
+  if (typeof api.getUnshieldedAddress === 'function') {
+    try {
+      const unshielded = await api.getUnshieldedAddress();
+      unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
+    } catch (e) {
+      console.debug('Error querying unshielded address:', e);
+    }
+  }
+
+  if (typeof api.getShieldedAddresses === 'function') {
+    try {
+      const state = await api.getShieldedAddresses();
+      shieldedAddress = state?.shieldedAddress || '';
+      address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
+    } catch (e) {
+      console.debug('Error querying shielded address:', e);
+    }
+  }
+
+  if (!address && unshieldedAddress) {
+    address = unshieldedAddress;
+  }
+  if (!address) {
+    address = 'mn_connected_wallet';
+  }
+
+  console.log('[Midnight Wallet] Successfully connected to Midnight Lace! Address:', address);
+
+  return {
+    address,
+    unshieldedAddress,
+    shieldedAddress,
+    uris: {
+      proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
+      indexerUri: MIDNIGHT_CONFIG.indexerUri,
+    },
+    api,
+    isSimulated: false,
   };
 }

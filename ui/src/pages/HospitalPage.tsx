@@ -293,10 +293,10 @@ export const HospitalPage: React.FC = () => {
     }
 
     // Requirement 3: Check to see if local proof server is running or active
-    if (proofServer.status !== 'online') {
+    if (proofServer.status !== 'online' && !proofServer.isSimulated && !walletSession?.isSimulated) {
       setProofStatus('error');
       setMessage(
-        `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute zero-knowledge proofs locally.`,
+        `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or connect in Simulated Demo Mode) to compute zero-knowledge proofs locally.`,
       );
       return;
     }
@@ -365,12 +365,14 @@ export const HospitalPage: React.FC = () => {
       let txHash = '';
       if (hex) {
         let sessionToUse = walletSession;
-        if (!sessionToUse?.api && isWalletInstalled) {
-          try {
-            const fresh = await connectWallet();
-            if (fresh) sessionToUse = fresh;
-          } catch {
-            // ignore
+        if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+          const fresh = await connectWallet();
+          if (fresh) {
+            sessionToUse = fresh;
+          } else {
+            throw new Error(
+              'Please connect your Midnight Lace wallet (or enable Simulated Mode) to submit this enrollment to Midnight.',
+            );
           }
         }
         const contract = await getMembraneContract(sessionToUse);
@@ -431,12 +433,14 @@ export const HospitalPage: React.FC = () => {
 
     try {
       let sessionToUse = walletSession;
-      if (!sessionToUse?.api && isWalletInstalled) {
-        try {
-          const fresh = await connectWallet();
-          if (fresh) sessionToUse = fresh;
-        } catch {
-          // ignore
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error(
+            'Please connect your Midnight Lace wallet (or enable Simulated Mode) to validate enrollment on Midnight Preview.',
+          );
         }
       }
 
@@ -808,7 +812,7 @@ export const HospitalPage: React.FC = () => {
                     <div className="action-row">
                       <button
                         type="button"
-                        onClick={walletSession ? verify : connectWallet}
+                        onClick={verify}
                         disabled={
                           proofStatus === 'loading' ||
                           contractStudyLoading ||
@@ -818,8 +822,8 @@ export const HospitalPage: React.FC = () => {
                         title={
                           !isSelectedTrialActive
                             ? 'Cannot enroll in an inactive trial'
-                            : proofServer.status === 'offline'
-                              ? 'Local proof server is offline'
+                            : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                              ? 'Local proof server is offline — cannot generate ZK proof'
                               : undefined
                         }
                       >
@@ -827,11 +831,11 @@ export const HospitalPage: React.FC = () => {
                           ? 'Generating local ZK proof…'
                           : !isSelectedTrialActive
                             ? 'Trial Inactive (Recruitment Closed)'
-                            : walletSession
-                              ? proofServer.status === 'offline'
-                                ? 'Proof Server Offline — Cannot Enroll'
-                                : 'Verify eligibility & prove'
-                              : 'Connect wallet to verify'}
+                            : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                              ? 'Proof Server Offline — Cannot Enroll'
+                              : walletSession
+                                ? 'Verify eligibility & prove'
+                                : 'Connect wallet & verify'}
                         <Arrow />
                       </button>
                     </div>
@@ -1087,14 +1091,14 @@ export const HospitalPage: React.FC = () => {
             <div className="action-row" style={{ marginTop: '18px' }}>
               <button
                 type="button"
-                onClick={walletSession ? handleValidateEnrollment : connectWallet}
+                onClick={handleValidateEnrollment}
                 disabled={validationStatus === 'loading'}
               >
                 {validationStatus === 'loading'
                   ? 'Broadcasting validation on Midnight…'
                   : walletSession
                     ? 'Validate trial enrollment on-chain'
-                    : 'Connect wallet to validate on-chain'}
+                    : 'Connect wallet & validate on-chain'}
                 <Arrow />
               </button>
             </div>

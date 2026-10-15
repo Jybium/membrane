@@ -196,8 +196,8 @@ export const ResearchLabPage: React.FC = () => {
     setDeactivatingHex(hex);
     setMessage('');
 
-    if (proofServer.status !== 'online') {
-      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute the trial cancellation proof.`;
+    if (proofServer.status !== 'online' && !proofServer.isSimulated && !walletSession?.isSimulated) {
+      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or connect in Simulated Demo Mode) to compute the trial cancellation proof.`;
       setMessage(errMsg);
       setZkStatus({
         step: 'failed',
@@ -214,12 +214,12 @@ export const ResearchLabPage: React.FC = () => {
     });
     try {
       let sessionToUse = walletSession;
-      if (!sessionToUse?.api && isWalletInstalled) {
-        try {
-          const fresh = await connectWallet();
-          if (fresh) sessionToUse = fresh;
-        } catch {
-          // ignore
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to deactivate this trial.');
         }
       }
       const contract = await getMembraneContract(sessionToUse);
@@ -282,9 +282,9 @@ export const ResearchLabPage: React.FC = () => {
 
   const publish = async () => {
     // Require proof server to be online (or simulated enclave enabled)
-    if (proofServer.status !== 'online') {
+    if (proofServer.status !== 'online' && !proofServer.isSimulated && !walletSession?.isSimulated) {
       setStatus('error');
-      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to synthesize zero-knowledge circuit proofs for trial creation.`;
+      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or connect in Simulated Demo Mode) to synthesize zero-knowledge circuit proofs for trial creation.`;
       setMessage(errMsg);
       setZkStatus({
         step: 'failed',
@@ -316,12 +316,12 @@ export const ResearchLabPage: React.FC = () => {
 
       // 1. Ensure wallet session is active and invoke createTrial circuit
       let sessionToUse = walletSession;
-      if (!sessionToUse?.api && isWalletInstalled) {
-        try {
-          const fresh = await connectWallet();
-          if (fresh) sessionToUse = fresh;
-        } catch {
-          // ignore
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to publish this trial to Midnight.');
         }
       }
 
@@ -502,21 +502,21 @@ export const ResearchLabPage: React.FC = () => {
           <div className="action-row">
             <button
               type="button"
-              onClick={walletSession ? publish : connectWallet}
+              onClick={publish}
               disabled={status === 'loading' || !diseaseCode || proofServer.status === 'checking'}
               title={
-                proofServer.status === 'offline'
+                proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
                   ? 'Local proof server is offline — cannot synthesize ZK proof'
                   : undefined
               }
             >
               {status === 'loading'
                 ? 'Publishing & Indexing…'
-                : walletSession
-                  ? proofServer.status === 'offline'
-                    ? 'Proof Server Offline — Cannot Publish'
-                    : 'Publish & Index Request'
-                  : 'Connect Wallet to Publish'}
+                : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                  ? 'Proof Server Offline — Cannot Publish'
+                  : walletSession
+                    ? 'Publish & Index Request'
+                    : 'Connect Wallet & Publish'}
               <Arrow />
             </button>
           </div>

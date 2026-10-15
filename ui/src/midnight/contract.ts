@@ -698,12 +698,16 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
         }
 
         txId = await computeSignedTransactionHash('createTrial', trialIdHash, signature || '', signer, nonce);
-      } else {
+      } else if (session?.isSimulated) {
         // Fallback for simulated development environments without Lace extension
         await new Promise((resolve) => setTimeout(resolve, 800));
         txId =
           '0x' +
           Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      } else {
+        throw new Error(
+          'Cannot publish trial: Midnight Lace wallet extension is not connected. To broadcast this trial to the Midnight blockchain, please connect your Midnight Lace wallet (or enable Simulated Mode).',
+        );
       }
 
       const trial: TrialInfo = {
@@ -855,11 +859,15 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
         }
 
         txId = await computeSignedTransactionHash('cancelTrial', targetKey, signature || '', signer, nonce);
-      } else {
+      } else if (session?.isSimulated) {
         await new Promise((resolve) => setTimeout(resolve, 700));
         txId =
           '0x' +
           Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+      } else {
+        throw new Error(
+          'Cannot cancel trial: Midnight Lace wallet extension is not connected. To broadcast this cancellation to the Midnight blockchain, please connect your Midnight Lace wallet (or enable Simulated Mode).',
+        );
       }
 
       targetTrial.status = TrialStatusEnum.inactive;
@@ -994,6 +1002,11 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
         }
 
         txId = await computeSignedTransactionHash('trialEnrollment', study.trialIdHash, signature || '', signer, nonce);
+      } else if (session?.isSimulated) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        txId =
+          '0x' +
+          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
       } else {
         throw new Error(
           'Cannot register on-chain: Midnight Lace wallet extension is not connected. To broadcast this enrollment to the Midnight blockchain, please install and connect Midnight Lace on Midnight Preview with sufficient DUST to balance transaction fees.',
@@ -1194,6 +1207,16 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           isValid: enrolled.length > 0,
           txId,
           signature,
+        };
+      } else if (session?.isSimulated) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        const enrollments = getEnrollmentsStore();
+        const enrolled = enrollments[cleanHex] || enrollments[trialHexId] || [];
+        return {
+          isValid: enrolled.length > 0 || true,
+          txId:
+            '0x' +
+            Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join(''),
         };
       } else {
         throw new Error(
