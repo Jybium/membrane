@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { MembraneBackendService } from '../services/membraneBackendService';
-import { connectWallet as connectMidnightWallet, type WalletSession } from '../midnight/wallet';
+import {
+  connectWallet as connectMidnightWallet,
+  connectSimulatedWallet,
+  silentReconnectWallet,
+  isWalletInstalled as checkWalletInstalled,
+  type WalletSession,
+} from '../midnight/wallet';
 import { getMembraneContract } from '../midnight/contract';
 import { MIDNIGHT_CONFIG } from '../midnight/config';
 
@@ -30,12 +36,17 @@ export interface ZkStatus {
 interface MembraneContextType {
   role: UserRole;
   setRole: (role: UserRole) => void;
-  // Wallet state
+  // Unified Wallet State
   isWalletConnected: boolean;
   walletAddress: string | null;
   walletSession: WalletSession | null;
+  setWalletSession: (session: WalletSession | null) => void;
   networkId: string;
-  connectWallet: () => Promise<void>;
+  connectWallet: () => Promise<WalletSession | null>;
+  disconnectWallet: () => void;
+  toggleWallet: () => Promise<void>;
+  isWalletInstalled: boolean;
+  connectSimulated: () => WalletSession;
   // Contract state
   contractAddress: string;
   setContractAddress: (addr: string) => void;
@@ -52,8 +63,13 @@ interface MembraneContextType {
     minPatientSampleCount: number,
   ) => Promise<{ trialIdHex: string; txHash: string }>;
   cancelTrial: (trialIdHex: string) => Promise<{ txHash: string }>;
-  enrollInTrial: (trialIdHex: string, patientAggregate: number) => Promise<{ txHash: string }>;
-  verifyEnrollment: (trialIdHex: string) => Promise<boolean>;
+  enrollInTrial: (
+    trialIdHex: string,
+    patientAggregate: number,
+    hospitalPrivateKey?: string,
+  ) => Promise<{ txHash: string }>;
+  verifyEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
+  validateTrialEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
   // ZK Progress
   zkStatus: ZkStatus;
   setZkStatus: (status: ZkStatus) => void;
@@ -85,32 +101,148 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [enrolledTrialIds, setEnrolledTrialIds] = useState<string[]>([]);
   const [isLoadingTrials, setIsLoadingTrials] = useState<boolean>(false);
 
-  // Wallet
+  // Unified Reactive Wallet State
   const [isWalletConnected, setIsWalletConnected] = useState<boolean>(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletSession, setWalletSession] = useState<WalletSession | null>(null);
+  const [isWalletInstalledState, setIsWalletInstalledState] = useState<boolean>(() => checkWalletInstalled());
   const networkId = import.meta.env.VITE_NETWORK_ID || 'preview';
 
-  // ZK Status
+  // Real-time detection of Midnight Lace browser extension content-script injection
+  useEffect(() => {
+    if (checkWalletInstalled()) {
+      setIsWalletInstalledState(true);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (checkWalletInstalled()) {
+        setIsWalletInstalledState(true);
+        clearInterval(interval);
+      }
+    }, 150);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setIsWalletInstalledState(checkWalletInstalled());
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Strict Web3 Security: In-Memory only, 0 data written to disk or localStorage
+  // Perform silent extension reconnect ONLY if already pre-authorized in Lace
+  useEffect(() => {
+    let mounted = true;
+
+    try {
+      localStorage.removeItem('membrane_wallet_session');
+    } catch {
+      // ignore
+    }
+
+    const checkSilentReconnect = async () => {
+      const session = await silentReconnectWallet();
+      if (mounted && session) {
+        setWalletSession(session);
+        setWalletAddress(session.address);
+        setIsWalletConnected(true);
+      }
+    };
+
+    void checkSilentReconnect();
+
+    const retryTimer = window.setTimeout(() => {
+      if (mounted && !walletSession) {
+        void checkSilentReconnect();
+      }
+    }, 350);
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(retryTimer);
+    };
+  }, [walletSession]);
+
+  // ZK Progress Status (Used exclusively for ZK transaction lifecycle modal)
   const [zkStatus, setZkStatus] = useState<ZkStatus>({ step: 'idle', message: '' });
 
   const resetZkStatus = useCallback(() => {
     setZkStatus({ step: 'idle', message: '' });
   }, []);
 
+  // Connect Simulated Mode (Fallback for environments without Lace)
+  const connectSimulated = useCallback((): WalletSession => {
+    const simSession = connectSimulatedWallet();
+    setWalletSession(simSession);
+    setWalletAddress(simSession.address);
+    setIsWalletConnected(true);
+    return simSession;
+  }, []);
+
   // Connect to Midnight Lace Wallet
-  const connectWallet = useCallback(async () => {
+  // Note: Wallet connection is a simple extension permission handshake, NOT a ZK transaction.
+  // We strictly do NOT set zkStatus here so that ZkProgressModal is NOT triggered.
+  const connectWallet = useCallback(async (): Promise<WalletSession | null> => {
     try {
       const session = await connectMidnightWallet();
       setWalletSession(session);
       setWalletAddress(session.address);
       setIsWalletConnected(true);
-    } catch {
-      const mockAddr = 'mn_shielded1q8v639420j88x0kltz99482hsa772km983ns002847a98';
-      setWalletAddress(mockAddr);
-      setIsWalletConnected(true);
+      return session;
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[Midnight Wallet] connectWallet note:', err);
+
+      if (/cancel|reject|denied|declined/i.test(msg)) {
+        return null;
+      }
+
+      if (/locked/i.test(msg)) {
+        alert(
+          'Midnight Lace wallet is locked.\n\n' +
+            'Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then click "Connect wallet".',
+        );
+        return null;
+      }
+
+      if (/not detected|install/i.test(msg)) {
+        const confirmSim = window.confirm(
+          'Midnight Lace wallet extension was not detected in your browser.\n\n' +
+            'To test live on-chain zero-knowledge circuits on Midnight Preview, please install the Midnight Lace extension.\n\n' +
+            'Would you like to connect in Simulated Demo Mode instead?',
+        );
+
+        if (confirmSim) {
+          return connectSimulated();
+        }
+
+        return null;
+      }
+
+      alert(`Failed to connect Midnight Lace wallet: ${msg}`);
+      return null;
     }
+  }, [connectSimulated]);
+
+  // Disconnect wallet (instant in-memory purge)
+  const disconnectWallet = useCallback(() => {
+    setWalletSession(null);
+    setWalletAddress(null);
+    setIsWalletConnected(false);
   }, []);
+
+  // Toggle wallet connection
+  const toggleWallet = useCallback(async () => {
+    if (walletSession) {
+      disconnectWallet();
+    } else {
+      await connectWallet();
+    }
+  }, [walletSession, connectWallet, disconnectWallet]);
 
   // Load trials from live backend indexer
   const refreshTrials = useCallback(async () => {
@@ -143,7 +275,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     void refreshTrials();
   }, [refreshTrials]);
 
-  // 1. Create Trial Action
+  // 1. Create Trial Action (Opens ZkProgressModal for ZK proof generation & broadcast)
   const createTrial = useCallback(
     async (
       diseaseCode: string,
@@ -151,6 +283,16 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       maxAge: number,
       minPatientSampleCount: number,
     ): Promise<{ trialIdHex: string; txHash: string }> => {
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to publish this trial.');
+        }
+      }
+
       setZkStatus({
         step: 'generating-proof',
         message: 'Generating zero-knowledge circuit proof for createTrial circuit...',
@@ -166,7 +308,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await new Promise((r) => setTimeout(r, 800));
 
       // Direct smart contract circuit invocation
-      const contract = await getMembraneContract(walletSession);
+      const contract = await getMembraneContract(sessionToUse);
       const contractRes = await contract.createTrial(diseaseCode, minAge, maxAge, minPatientSampleCount);
       const trialIdHex = contractRes.trialHexId;
       const txHash = contractRes.txId;
@@ -214,12 +356,22 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return { trialIdHex, txHash };
     },
-    [refreshTrials, walletAddress, walletSession],
+    [refreshTrials, walletAddress, walletSession, connectWallet],
   );
 
-  // 2. Cancel Trial Action
+  // 2. Cancel Trial Action (Opens ZkProgressModal for ZK proof deactivation & broadcast)
   const cancelTrial = useCallback(
     async (trialIdHex: string): Promise<{ txHash: string }> => {
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to cancel this trial.');
+        }
+      }
+
       setZkStatus({
         step: 'generating-proof',
         message: 'Generating zero-knowledge circuit proof for cancelTrial (ownership check)...',
@@ -228,7 +380,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await new Promise((r) => setTimeout(r, 800));
 
       // Direct smart contract circuit invocation
-      const contract = await getMembraneContract(walletSession);
+      const contract = await getMembraneContract(sessionToUse);
       const contractRes = await contract.cancelTrial(trialIdHex);
       const txHash = contractRes.txId;
 
@@ -255,12 +407,26 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return { txHash };
     },
-    [walletSession],
+    [walletSession, connectWallet],
   );
 
-  // 3. Hospital Trial Enrollment Action
+  // 3. Hospital Trial Enrollment Action (Opens ZkProgressModal for ZK proof enrollment & broadcast)
   const enrollInTrial = useCallback(
-    async (trialIdHex: string, patientAggregate: number): Promise<{ txHash: string }> => {
+    async (
+      trialIdHex: string,
+      patientAggregate: number,
+      hospitalPrivateKey?: string,
+    ): Promise<{ txHash: string }> => {
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to enroll in this trial.');
+        }
+      }
+
       setZkStatus({
         step: 'generating-proof',
         message: `Evaluating EHR witness (Sample Count: ${patientAggregate}). Generating ZK Proof that count >= threshold...`,
@@ -276,8 +442,8 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await new Promise((r) => setTimeout(r, 800));
 
       // Direct smart contract circuit invocation
-      const contract = await getMembraneContract(walletSession);
-      const contractRes = await contract.trialEnrollment(trialIdHex, patientAggregate);
+      const contract = await getMembraneContract(sessionToUse);
+      const contractRes = await contract.trialEnrollment(trialIdHex, patientAggregate, hospitalPrivateKey);
       const txHash = contractRes.txId;
 
       setZkStatus({
@@ -301,31 +467,53 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return { txHash };
     },
-    [walletSession],
+    [walletSession, connectWallet],
   );
 
-  // 4. Verify Trial Enrollment Action
+  // 4. Verify Trial Enrollment Action (Opens ZkProgressModal for ZK proof validation)
   const verifyEnrollment = useCallback(
-    async (trialIdHex: string): Promise<boolean> => {
+    async (trialIdHex: string, privateKey?: string): Promise<boolean> => {
+      let sessionToUse = walletSession;
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to verify enrollment.');
+        }
+      }
+
       setZkStatus({
         step: 'generating-proof',
-        message: 'Running validateTrialEnrollment circuit proof...',
+        message: 'Witnessing hospital private key & running validateTrialEnrollment circuit...',
       });
 
-      // Direct smart contract circuit query
-      const contract = await getMembraneContract(walletSession);
-      const isEnrolled = await contract.validateTrialEnrollment(trialIdHex);
+      try {
+        // Direct smart contract circuit query
+        const contract = await getMembraneContract(sessionToUse);
+        const res = await contract.validateTrialEnrollment(trialIdHex, privateKey);
+        const isEnrolled = typeof res === 'boolean' ? res : res.isValid;
+        const txId = typeof res === 'object' && res ? res.txId : undefined;
 
-      setZkStatus({
-        step: 'confirmed',
-        message: isEnrolled
-          ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
-          : 'Verification FAILED: Hospital tag is not present in this trial enrollment set.',
-      });
+        setZkStatus({
+          step: 'confirmed',
+          message: isEnrolled
+            ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
+            : 'Verification FAILED: Hospital is not enrolled in this trial on Midnight.',
+          txHash: txId,
+        });
 
-      return isEnrolled;
+        return isEnrolled;
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setZkStatus({
+          step: 'failed',
+          message: `Verification Error: ${msg}`,
+        });
+        throw err;
+      }
     },
-    [walletSession],
+    [walletSession, connectWallet],
   );
 
   const value = useMemo(
@@ -335,8 +523,13 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       isWalletConnected,
       walletAddress,
       walletSession,
+      setWalletSession,
       networkId,
       connectWallet,
+      disconnectWallet,
+      toggleWallet,
+      isWalletInstalled: isWalletInstalledState,
+      connectSimulated,
       contractAddress,
       setContractAddress,
       activeTrials,
@@ -348,6 +541,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       cancelTrial,
       enrollInTrial,
       verifyEnrollment,
+      validateTrialEnrollment: verifyEnrollment,
       zkStatus,
       setZkStatus,
       resetZkStatus,
@@ -359,6 +553,10 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       walletSession,
       networkId,
       connectWallet,
+      disconnectWallet,
+      toggleWallet,
+      isWalletInstalledState,
+      connectSimulated,
       contractAddress,
       activeTrials,
       inactiveTrials,

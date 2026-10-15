@@ -14,6 +14,7 @@ const config = tseslint.config(
       'src/contexts/BrowserDeployedBoardManager.ts',
       'src/contexts/DeployedBoardContext.tsx',
       'src/hooks/useDeployedBoardContext.ts',
+      'src/midnight/compiled/**',
     ],
   },
   eslint.configs.recommended,

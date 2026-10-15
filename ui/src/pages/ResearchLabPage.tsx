@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppHeader, Arrow } from '../components/AppHeader';
 import { DynamicIcdSelect } from '../components/DynamicIcdSelect';
@@ -6,7 +6,7 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract } from '../midnight/contract';
+import { getMembraneContract, getTrialStudySync } from '../midnight/contract';
 import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
 import { subscribeOnchainContract, type OnchainContractState } from '../midnight/onchainLedger';
 import {
@@ -17,6 +17,7 @@ import {
   type ProofServerState,
 } from '../midnight/proofServer';
 import { useMembrane } from '../contexts/MembraneContext';
+import { TransactionReceiptCard } from '../components/TransactionReceiptCard';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -113,6 +114,8 @@ export const ResearchLabPage: React.FC = () => {
   const [maxAge, setMaxAge] = useState<string>(urlMaxAge);
   const [trialHexId, setTrialHexId] = useState<string>(urlTrial);
 
+  const [resultsFilter, setResultsFilter] = useState<string>('ALL');
+  const [allNetworkTrials, setAllNetworkTrials] = useState<ApiRecord[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string>('');
   const [trials, setTrials] = useState<ApiRecord[]>([]);
@@ -174,10 +177,10 @@ export const ResearchLabPage: React.FC = () => {
     setStatus('loading');
     setMessage('');
     try {
-      const clean = diseaseCode.trim().toUpperCase();
-      const path = clean ? `/clinical-trials/index?diseaseCode=${encodeURIComponent(clean)}` : `/clinical-trials/index`;
-      const result = await apiRequest<{ data?: ApiRecord[] }>(path);
+      // Fetch all indexed clinical trials across the Midnight network
+      const result = await apiRequest<{ data?: ApiRecord[] }>('/clinical-trials/index');
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
+      setAllNetworkTrials(list);
       setTrials(list);
       setStatus('success');
       void fetchTrialStatuses(list);
@@ -185,19 +188,42 @@ export const ResearchLabPage: React.FC = () => {
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'Could not load requests.');
     }
-  }, [diseaseCode, fetchTrialStatuses]);
+  }, [fetchTrialStatuses]);
 
   useEffect(() => {
     void loadTrials();
   }, [loadTrials]);
+
+  const displayedTrials = useMemo(() => {
+    if (resultsFilter === 'ALL') return allNetworkTrials;
+    return allNetworkTrials.filter(
+      (t) => text(t, ['diseaseCode', 'icd'], '').toUpperCase() === resultsFilter.toUpperCase(),
+    );
+  }, [allNetworkTrials, resultsFilter]);
+
+  const filterOptions = useMemo(() => {
+    const counts: Record<string, number> = { ALL: allNetworkTrials.length };
+    allNetworkTrials.forEach((t) => {
+      const code = text(t, ['diseaseCode', 'icd'], '').toUpperCase();
+      if (code) {
+        counts[code] = (counts[code] || 0) + 1;
+      }
+    });
+    const keySet = new Set(['ALL', 'K30', 'A15', 'B18', ...Object.keys(counts)]);
+    return Array.from(keySet).map((key) => ({
+      key,
+      label: key === 'ALL' ? 'All Cohorts' : `ICD ${key}`,
+      count: counts[key] || 0,
+    }));
+  }, [allNetworkTrials]);
 
   const handleDeactivateTrial = async (hex: string) => {
     if (!hex) return;
     setDeactivatingHex(hex);
     setMessage('');
 
-    if (proofServer.status !== 'online') {
-      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to compute the trial cancellation proof.`;
+    if (proofServer.status !== 'online' && !proofServer.isSimulated && !walletSession?.isSimulated) {
+      const errMsg = `Local proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or connect in Simulated Demo Mode) to compute the trial cancellation proof.`;
       setMessage(errMsg);
       setZkStatus({
         step: 'failed',
@@ -214,12 +240,12 @@ export const ResearchLabPage: React.FC = () => {
     });
     try {
       let sessionToUse = walletSession;
-      if (!sessionToUse?.api && isWalletInstalled) {
-        try {
-          const fresh = await connectWallet();
-          if (fresh) sessionToUse = fresh;
-        } catch {
-          // ignore
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to deactivate this trial.');
         }
       }
       const contract = await getMembraneContract(sessionToUse);
@@ -282,9 +308,9 @@ export const ResearchLabPage: React.FC = () => {
 
   const publish = async () => {
     // Require proof server to be online (or simulated enclave enabled)
-    if (proofServer.status !== 'online') {
+    if (proofServer.status !== 'online' && !proofServer.isSimulated && !walletSession?.isSimulated) {
       setStatus('error');
-      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or enable the Simulated Enclave toggle) to synthesize zero-knowledge circuit proofs for trial creation.`;
+      const errMsg = `Proof server is offline. An air-gapped Midnight proof server must be running on ${proofServer.uri} (or connect in Simulated Demo Mode) to synthesize zero-knowledge circuit proofs for trial creation.`;
       setMessage(errMsg);
       setZkStatus({
         step: 'failed',
@@ -316,12 +342,12 @@ export const ResearchLabPage: React.FC = () => {
 
       // 1. Ensure wallet session is active and invoke createTrial circuit
       let sessionToUse = walletSession;
-      if (!sessionToUse?.api && isWalletInstalled) {
-        try {
-          const fresh = await connectWallet();
-          if (fresh) sessionToUse = fresh;
-        } catch {
-          // ignore
+      if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
+        const fresh = await connectWallet();
+        if (fresh) {
+          sessionToUse = fresh;
+        } else {
+          throw new Error('Please connect your Midnight Lace wallet (or enable Simulated Mode) to publish this trial to Midnight.');
         }
       }
 
@@ -502,21 +528,21 @@ export const ResearchLabPage: React.FC = () => {
           <div className="action-row">
             <button
               type="button"
-              onClick={walletSession ? publish : connectWallet}
+              onClick={publish}
               disabled={status === 'loading' || !diseaseCode || proofServer.status === 'checking'}
               title={
-                proofServer.status === 'offline'
+                proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
                   ? 'Local proof server is offline — cannot synthesize ZK proof'
                   : undefined
               }
             >
               {status === 'loading'
                 ? 'Publishing & Indexing…'
-                : walletSession
-                  ? proofServer.status === 'offline'
-                    ? 'Proof Server Offline — Cannot Publish'
-                    : 'Publish & Index Request'
-                  : 'Connect Wallet to Publish'}
+                : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                  ? 'Proof Server Offline — Cannot Publish'
+                  : walletSession
+                    ? 'Publish & Index Request'
+                    : 'Connect Wallet & Publish'}
               <Arrow />
             </button>
           </div>
@@ -537,34 +563,13 @@ export const ResearchLabPage: React.FC = () => {
                 {getDiseaseName(diseaseCode)})
               </div>
               {lastTxHash && lastTxType === 'create' && (
-                <div className="tx-hash-box">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                    <span className="beacon-dot online" />
-                    <span className="tx-label">Midnight Tx:</span>
-                    <code title={lastTxHash}>
-                      {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
-                    </code>
-                  </div>
-                  <div className="tx-actions">
-                    <button
-                      type="button"
-                      className="tx-btn secondary"
-                      onClick={() => copyTxHash(lastTxHash)}
-                      title="Copy full transaction hash"
-                    >
-                      {copiedTx ? 'Copied!' : 'Copy'}
-                    </button>
-                    <a
-                      href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="tx-btn"
-                      title="View transaction on Midnight Preview Explorer"
-                    >
-                      Explorer ↗
-                    </a>
-                  </div>
-                </div>
+                <TransactionReceiptCard
+                  txHash={lastTxHash}
+                  label="Clinical Trial Published"
+                  sublabel={`Criteria Registered: ICD-10 ${diseaseCode} (${getDiseaseName(diseaseCode)})`}
+                  statusBadge="Active on Midnight"
+                  trialIdHash={trialHexId}
+                />
               )}
             </div>
           )}
@@ -572,34 +577,13 @@ export const ResearchLabPage: React.FC = () => {
           {lastTxHash && lastTxType === 'cancel' && (
             <div className="notice success" style={{ marginTop: '12px' }}>
               <div>{message}</div>
-              <div className="tx-hash-box">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                  <span className="beacon-dot online" />
-                  <span className="tx-label">Cancellation Tx:</span>
-                  <code title={lastTxHash}>
-                    {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
-                  </code>
-                </div>
-                <div className="tx-actions">
-                  <button
-                    type="button"
-                    className="tx-btn secondary"
-                    onClick={() => copyTxHash(lastTxHash)}
-                    title="Copy full transaction hash"
-                  >
-                    {copiedTx ? 'Copied!' : 'Copy'}
-                  </button>
-                  <a
-                    href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="tx-btn"
-                    title="View transaction on Midnight Preview Explorer"
-                  >
-                    Explorer ↗
-                  </a>
-                </div>
-              </div>
+              <TransactionReceiptCard
+                txHash={lastTxHash}
+                label="Trial Cancellation Receipt"
+                sublabel="Study status transitioned to Inactive on Midnight Ledger"
+                statusBadge="Deactivated"
+                variant="navy"
+              />
             </div>
           )}
         </section>
@@ -610,6 +594,7 @@ export const ResearchLabPage: React.FC = () => {
               <span>02</span>
               <div>
                 <h2>Indexed requests</h2>
+                <p>Public clinical trial cohort requests indexed on the Midnight network.</p>
               </div>
             </div>
             <button type="button" className="text-button" onClick={loadTrials}>
@@ -617,15 +602,34 @@ export const ResearchLabPage: React.FC = () => {
             </button>
           </div>
 
-          {status === 'loading' && trials.length === 0 ? (
+          {/* Diagnostic Category Filter Bar */}
+          <div className="filter-pill-bar">
+            {filterOptions.map(({ key, label, count: pillCount }) => {
+              const isSelected = resultsFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`filter-pill-btn ${isSelected ? 'active' : ''}`}
+                  onClick={() => setResultsFilter(key)}
+                >
+                  {label}
+                  <span className="pill-count">{pillCount}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {status === 'loading' && allNetworkTrials.length === 0 ? (
             <RowSkeleton count={3} />
-          ) : trials.length ? (
+          ) : displayedTrials.length ? (
             <div className="rows">
-              {trials.map((trial, index) => {
+              {displayedTrials.map((trial, index) => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
-                const code = text(trial, ['diseaseCode', 'icd'], diseaseCode);
+                const code = text(trial, ['diseaseCode', 'icd'], 'K30');
                 const isActive = trialStatuses[hex] !== false;
                 const isDeactivating = deactivatingHex === hex;
+                const study = getTrialStudySync(hex, code);
 
                 return (
                   <div
@@ -634,13 +638,22 @@ export const ResearchLabPage: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
                   >
                     <span className="row-icon">CT</span>
-                    <div style={{ flex: 1 }}>
-                      <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
-                      <small>
-                        Trial ID: {hex.slice(0, 16)}… • ICD {code}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
+                        <span className="cohort-badge highlight">ICD-10 {code}</span>
+                        <span className="cohort-badge">Min. {study.minCohort} patients</span>
+                        <span className="cohort-badge">Ages {study.minAge}–{study.maxAge}</span>
+                        <span className="cohort-badge sites">
+                          {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
+                        </span>
+                      </div>
+                      <small style={{ marginTop: '4px' }}>
+                        Trial ID: <code style={{ fontFamily: 'monospace' }}>{hex.slice(0, 16)}…{hex.slice(-6)}</code> • Sponsor:{' '}
+                        <code style={{ fontFamily: 'monospace' }}>{(study.researchLabIdHash || '0x...').slice(0, 12)}…</code>
                       </small>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
                       <span className={`status-pill ${isActive ? 'active' : 'inactive'}`}>
                         <span className="status-dot" />
                         {isActive ? 'Active' : 'Closed'}
@@ -666,7 +679,11 @@ export const ResearchLabPage: React.FC = () => {
           ) : (
             <div className="empty">
               <strong>No requests found</strong>
-              <span>Publish a request or refresh the index.</span>
+              <span>
+                {resultsFilter === 'ALL'
+                  ? 'No clinical trial requests have been indexed yet. Publish a request above.'
+                  : `No clinical trials found matching filter ICD ${resultsFilter}.`}
+              </span>
             </div>
           )}
         </section>

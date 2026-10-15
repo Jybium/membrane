@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run --workspace=@midnight-ntwrk/bboard-ui build",
-  "outputDirectory": "bboard-ui/dist",
+  "outputDirectory": "ui/dist",
   "framework": "vite",
   "rewrites": [
     {
