@@ -613,13 +613,18 @@ export const HospitalPage: React.FC = () => {
                             <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
                             <span className="cohort-badge highlight">ICD-10 {code}</span>
                             <span className="cohort-badge">Min. {study.minCohort} patients</span>
-                            <span className="cohort-badge">Ages {study.minAge}–{study.maxAge}</span>
+                            <span className="cohort-badge">
+                              Ages {study.minAge}–{study.maxAge}
+                            </span>
                             <span className="cohort-badge sites">
                               {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
                             </span>
                           </div>
                           <small style={{ marginTop: '4px' }}>
-                            Trial ID: <code style={{ fontFamily: 'monospace' }}>{hex.slice(0, 16)}…{hex.slice(-6)}</code>
+                            Trial ID:{' '}
+                            <code style={{ fontFamily: 'monospace' }}>
+                              {hex.slice(0, 16)}…{hex.slice(-6)}
+                            </code>
                           </small>
                         </div>
                         <span
@@ -737,7 +742,11 @@ export const HospitalPage: React.FC = () => {
                       <div className="cohort-header-title">
                         <span className="protocol-chip">MIDNIGHT CLINICAL COHORT SPECIFICATION</span>
                         <h3>
-                          ICD {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)} —{' '}
+                          ICD{' '}
+                          {contractStudy
+                            ? contractStudy.diseaseCode
+                            : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}{' '}
+                          —{' '}
                           {getDiseaseName(
                             contractStudy
                               ? contractStudy.diseaseCode
@@ -781,11 +790,16 @@ export const HospitalPage: React.FC = () => {
                       <div className="criteria-cell">
                         <span className="cell-label">Clinical Indication</span>
                         <strong className="cell-value">
-                          ICD-10 {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}
+                          ICD-10{' '}
+                          {contractStudy
+                            ? contractStudy.diseaseCode
+                            : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}
                         </strong>
                         <span className="cell-sub">
                           {getDiseaseName(
-                            contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
+                            contractStudy
+                              ? contractStudy.diseaseCode
+                              : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
                           )}
                         </span>
                       </div>
@@ -834,26 +848,8 @@ export const HospitalPage: React.FC = () => {
                       {/* 6. Institutional Privacy Model */}
                       <div className="criteria-cell">
                         <span className="cell-label">Zero-Knowledge Privacy</span>
-                        <strong className="cell-value shield">
-                          Strictly Local / Air-Gapped
-                        </strong>
+                        <strong className="cell-value shield">Strictly Local / Air-Gapped</strong>
                         <span className="cell-sub">0 raw patient records transmitted</span>
-                      </div>
-                    </div>
-
-                    {/* Pre-flight EHR Vault Feasibility Preview */}
-                    <div className="ehr-feasibility-summary">
-                      <div className="feasibility-title">
-                        <span className="vault-icon">🏥</span>
-                        <div>
-                          <strong>Local Hospital EHR Vault Evaluation Scope</strong>
-                          <p>
-                            Proof generator queries local private hospital records for condition{' '}
-                            <b>ICD {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}</b> with patient age between{' '}
-                            <b>{contractStudy?.minAge ?? 40}</b> and <b>{contractStudy?.maxAge ?? 65}</b>. If qualifying consented patient count is ≥{' '}
-                            <b>{requiredCohort}</b>, a zero-knowledge membership proof is synthesized without leaking individual patient records.
-                          </p>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -897,7 +893,9 @@ export const HospitalPage: React.FC = () => {
                         title={
                           !isSelectedTrialActive
                             ? 'Cannot enroll in an inactive trial'
-                            : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                            : proofServer.status === 'offline' &&
+                                !proofServer.isSimulated &&
+                                !walletSession?.isSimulated
                               ? 'Local proof server is offline — cannot generate ZK proof'
                               : undefined
                         }
@@ -906,7 +904,9 @@ export const HospitalPage: React.FC = () => {
                           ? 'Generating local ZK proof…'
                           : !isSelectedTrialActive
                             ? 'Trial Inactive (Recruitment Closed)'
-                            : proofServer.status === 'offline' && !proofServer.isSimulated && !walletSession?.isSimulated
+                            : proofServer.status === 'offline' &&
+                                !proofServer.isSimulated &&
+                                !walletSession?.isSimulated
                               ? 'Proof Server Offline — Cannot Enroll'
                               : walletSession
                                 ? 'Verify eligibility & prove'
@@ -1099,7 +1099,9 @@ export const HospitalPage: React.FC = () => {
                   )}
                 </div>
                 {validationTrialHex && (
-                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <div
+                    style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}
+                  >
                     {(() => {
                       const study = getTrialStudySync(validationTrialHex);
                       return (
@@ -1108,7 +1110,9 @@ export const HospitalPage: React.FC = () => {
                             ICD-10 {study.diseaseCode} ({getDiseaseName(study.diseaseCode)})
                           </span>
                           <span className="cohort-badge">Required: ≥ {study.minCohort} patients</span>
-                          <span className="cohort-badge">Ages: {study.minAge}–{study.maxAge}</span>
+                          <span className="cohort-badge">
+                            Ages: {study.minAge}–{study.maxAge}
+                          </span>
                           <span className="cohort-badge sites">
                             {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
                           </span>
@@ -1206,11 +1210,7 @@ export const HospitalPage: React.FC = () => {
             </div>
 
             <div className="action-row" style={{ marginTop: '18px' }}>
-              <button
-                type="button"
-                onClick={handleValidateEnrollment}
-                disabled={validationStatus === 'loading'}
-              >
+              <button type="button" onClick={handleValidateEnrollment} disabled={validationStatus === 'loading'}>
                 {validationStatus === 'loading'
                   ? 'Broadcasting validation on Midnight…'
                   : walletSession
