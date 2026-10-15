@@ -296,42 +296,87 @@ export const ZkProgressModal: React.FC = () => {
         {zkStatus.txHash && (
           <Box
             sx={{
-              background: '#0e1813',
-              border: '1px solid #163826',
-              borderRadius: '8px',
-              p: 1.2,
+              background: 'linear-gradient(145deg, #0d1e16 0%, #08140e 100%)',
+              border: '1px solid rgba(52, 211, 153, 0.35)',
+              borderLeft: '3px solid #34d399',
+              borderRadius: '9px',
+              p: 1.5,
               mb: 2.5,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
-            <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
-              <Typography
-                variant="caption"
-                sx={{ color: '#6b7280', display: 'block', fontWeight: 600, fontSize: '0.68rem' }}
-              >
-                MIDNIGHT TRANSACTION HASH
-              </Typography>
+            <Box sx={{ textAlign: 'left', overflow: 'hidden', mr: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: '#9ca3af', fontWeight: 700, fontSize: '0.68rem', letterSpacing: '0.5px' }}
+                >
+                  MIDNIGHT ON-CHAIN PROOF
+                </Typography>
+                <span
+                  style={{
+                    background: 'rgba(52, 211, 153, 0.15)',
+                    color: '#34d399',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(52, 211, 153, 0.3)',
+                  }}
+                >
+                  PREVIEW SETTLED
+                </span>
+              </Box>
               <Typography
                 variant="body2"
                 sx={{
                   fontFamily: 'JetBrains Mono, monospace',
                   color: '#34d399',
-                  fontSize: '0.78rem',
+                  fontSize: '0.8rem',
                   textOverflow: 'ellipsis',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' },
                 }}
+                onClick={copyTxHash}
+                title="Click to copy full hash"
               >
                 {zkStatus.txHash}
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Tooltip title={copiedTx ? 'Copied!' : 'Copy Tx Hash'}>
-                <IconButton size="small" onClick={copyTxHash} sx={{ color: '#34d399' }}>
-                  <ContentCopy fontSize="small" />
-                </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+              <Tooltip title={copiedTx ? 'Copied to Clipboard!' : 'Copy Transaction Hash'}>
+                <Button
+                  size="small"
+                  onClick={copyTxHash}
+                  sx={{
+                    color: copiedTx ? '#ffffff' : '#34d399',
+                    background: copiedTx ? '#059669' : 'rgba(52, 211, 153, 0.12)',
+                    border: '1px solid rgba(52, 211, 153, 0.3)',
+                    fontSize: '0.72rem',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    minWidth: 0,
+                    px: 1.2,
+                    py: 0.5,
+                    borderRadius: '6px',
+                    '&:hover': {
+                      background: copiedTx ? '#047857' : 'rgba(52, 211, 153, 0.25)',
+                    },
+                  }}
+                  startIcon={
+                    copiedTx ? (
+                      <CheckCircle sx={{ fontSize: '0.85rem !important' }} />
+                    ) : (
+                      <ContentCopy sx={{ fontSize: '0.85rem !important' }} />
+                    )
+                  }
+                >
+                  {copiedTx ? 'Copied!' : 'Copy'}
+                </Button>
               </Tooltip>
               <Tooltip title="View Transaction on Midnight Preview Explorer">
                 <IconButton
@@ -340,9 +385,16 @@ export const ZkProgressModal: React.FC = () => {
                   href={MIDNIGHT_CONFIG.explorerTxUrl(zkStatus.txHash)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  sx={{ color: '#34d399' }}
+                  sx={{
+                    color: '#34d399',
+                    background: 'rgba(52, 211, 153, 0.08)',
+                    border: '1px solid rgba(52, 211, 153, 0.25)',
+                    borderRadius: '6px',
+                    p: 0.6,
+                    '&:hover': { background: 'rgba(52, 211, 153, 0.2)' },
+                  }}
                 >
-                  <OpenInNew fontSize="small" />
+                  <OpenInNew sx={{ fontSize: '0.9rem' }} />
                 </IconButton>
               </Tooltip>
             </Box>

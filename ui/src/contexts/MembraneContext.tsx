@@ -63,7 +63,11 @@ interface MembraneContextType {
     minPatientSampleCount: number,
   ) => Promise<{ trialIdHex: string; txHash: string }>;
   cancelTrial: (trialIdHex: string) => Promise<{ txHash: string }>;
-  enrollInTrial: (trialIdHex: string, patientAggregate: number) => Promise<{ txHash: string }>;
+  enrollInTrial: (
+    trialIdHex: string,
+    patientAggregate: number,
+    hospitalPrivateKey?: string,
+  ) => Promise<{ txHash: string }>;
   verifyEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
   validateTrialEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
   // ZK Progress
@@ -400,7 +404,11 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // 3. Hospital Trial Enrollment Action (Opens ZkProgressModal for ZK proof enrollment & broadcast)
   const enrollInTrial = useCallback(
-    async (trialIdHex: string, patientAggregate: number): Promise<{ txHash: string }> => {
+    async (
+      trialIdHex: string,
+      patientAggregate: number,
+      hospitalPrivateKey?: string,
+    ): Promise<{ txHash: string }> => {
       let sessionToUse = walletSession;
       if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
         const fresh = await connectWallet();
@@ -427,7 +435,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Direct smart contract circuit invocation
       const contract = await getMembraneContract(sessionToUse);
-      const contractRes = await contract.trialEnrollment(trialIdHex, patientAggregate);
+      const contractRes = await contract.trialEnrollment(trialIdHex, patientAggregate, hospitalPrivateKey);
       const txHash = contractRes.txId;
 
       setZkStatus({

@@ -22,6 +22,7 @@ import {
   setSimulatedProver,
   type ProofServerState,
 } from '../midnight/proofServer';
+import { TransactionReceiptCard } from '../components/TransactionReceiptCard';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -266,9 +267,7 @@ export const HospitalPage: React.FC = () => {
     setLastTxHash('');
     const hex = text(trial, ['trialHexId', 'hexId', 'id'], '');
     updateUrlParams({ trial: hex });
-    if (!validationTrialHex) {
-      setValidationTrialHex(hex);
-    }
+    setValidationTrialHex(hex);
   };
 
   const requiredCohort = contractStudy?.minCohort ?? 0;
@@ -377,11 +376,14 @@ export const HospitalPage: React.FC = () => {
         }
         const contract = await getMembraneContract(sessionToUse);
         // Invokes circuit trialEnrollment(trialIdHash) defined in membrane.compact
-        const contractRes = await contract.trialEnrollment(hex, localCount);
+        const contractRes = await contract.trialEnrollment(hex, localCount, validationPrivateKey);
         txHash = contractRes.txId;
       }
 
       setLastTxHash(txHash);
+      if (hex) {
+        setValidationTrialHex(hex);
+      }
 
       setZkStatus({
         step: 'confirmed',
@@ -774,34 +776,13 @@ export const HospitalPage: React.FC = () => {
                         </p>
 
                         {eligible && lastTxHash && (
-                          <div className="tx-hash-box">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                              <span className="beacon-dot online" />
-                              <span className="tx-label">Midnight Tx:</span>
-                              <code title={lastTxHash}>
-                                {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
-                              </code>
-                            </div>
-                            <div className="tx-actions">
-                              <button
-                                type="button"
-                                className="tx-btn secondary"
-                                onClick={() => copyTxHash(lastTxHash)}
-                                title="Copy full transaction hash"
-                              >
-                                {copiedTx ? 'Copied!' : 'Copy'}
-                              </button>
-                              <a
-                                href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="tx-btn"
-                                title="View transaction on Midnight Preview Explorer"
-                              >
-                                Explorer ↗
-                              </a>
-                            </div>
-                          </div>
+                          <TransactionReceiptCard
+                            txHash={lastTxHash}
+                            label="Hospital Enrollment Proof"
+                            sublabel="Zero-Knowledge Aggregate Committed to Midnight Network"
+                            statusBadge="Enrolled & Balanced"
+                            trialIdHash={selectedHex}
+                          />
                         )}
                       </div>
                       <button type="button" onClick={() => setProofStatus('idle')}>
@@ -1081,6 +1062,29 @@ export const HospitalPage: React.FC = () => {
                   >
                     Fill Demo Key
                   </button>
+                  {walletSession && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const key = walletSession.unshieldedAddress || walletSession.address || 'Hospital1x09$!@';
+                        setValidationPrivateKey(key);
+                      }}
+                      title="Fill connected Midnight Lace wallet address as witness key"
+                      style={{
+                        padding: '0 12px',
+                        height: '40px',
+                        border: '1px solid #DDD7CB',
+                        borderRadius: '7px',
+                        background: '#FAF8F4',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Fill Wallet Key
+                    </button>
+                  )}
                 </div>
                 <small style={{ color: '#6C7D8C', fontSize: '9px' }}>
                   Used as private witness state inside the zero-knowledge circuit. Never stored on-chain or transmitted.
@@ -1122,47 +1126,19 @@ export const HospitalPage: React.FC = () => {
                   </p>
 
                   {validationTxHash && (
-                    <div className="tx-hash-box" style={{ marginTop: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                        <span className="beacon-dot online" />
-                        <span className="tx-label">Midnight Tx:</span>
-                        <code title={validationTxHash}>
-                          {validationTxHash.slice(0, 10)}…{validationTxHash.slice(-8)}
-                        </code>
-                      </div>
-                      <div className="tx-actions">
-                        <button
-                          type="button"
-                          className="tx-btn secondary"
-                          onClick={() => copyTxHash(validationTxHash)}
-                          title="Copy full transaction hash"
-                        >
-                          {copiedTx ? 'Copied!' : 'Copy'}
-                        </button>
-                        <a
-                          href={MIDNIGHT_CONFIG.explorerTxUrl(validationTxHash)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="tx-btn"
-                          title="View transaction on Midnight Preview Explorer"
-                        >
-                          Explorer ↗
-                        </a>
-                      </div>
-                    </div>
+                    <TransactionReceiptCard
+                      txHash={validationTxHash}
+                      label="Enrollment Verification Receipt"
+                      sublabel={
+                        validationResult
+                          ? 'Zero-Knowledge Cryptographic Proof Verified on Midnight Preview'
+                          : 'Validation Response Settled on Midnight'
+                      }
+                      statusBadge={validationResult ? 'Membership Proven' : 'Check Completed'}
+                      trialIdHash={validationTrialHex}
+                      variant={validationResult ? 'emerald' : 'navy'}
+                    />
                   )}
-
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      fontSize: '10px',
-                      fontFamily: 'monospace',
-                      color: '#1A2A39',
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    <span>Trial ID Hash: {validationTrialHex}</span>
-                  </div>
                 </div>
                 <button
                   type="button"

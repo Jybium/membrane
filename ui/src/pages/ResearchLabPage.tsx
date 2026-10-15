@@ -17,6 +17,7 @@ import {
   type ProofServerState,
 } from '../midnight/proofServer';
 import { useMembrane } from '../contexts/MembraneContext';
+import { TransactionReceiptCard } from '../components/TransactionReceiptCard';
 
 const DEFAULT_API_BASE = 'https://membrane-api.onrender.com/v1';
 
@@ -537,34 +538,13 @@ export const ResearchLabPage: React.FC = () => {
                 {getDiseaseName(diseaseCode)})
               </div>
               {lastTxHash && lastTxType === 'create' && (
-                <div className="tx-hash-box">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                    <span className="beacon-dot online" />
-                    <span className="tx-label">Midnight Tx:</span>
-                    <code title={lastTxHash}>
-                      {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
-                    </code>
-                  </div>
-                  <div className="tx-actions">
-                    <button
-                      type="button"
-                      className="tx-btn secondary"
-                      onClick={() => copyTxHash(lastTxHash)}
-                      title="Copy full transaction hash"
-                    >
-                      {copiedTx ? 'Copied!' : 'Copy'}
-                    </button>
-                    <a
-                      href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="tx-btn"
-                      title="View transaction on Midnight Preview Explorer"
-                    >
-                      Explorer ↗
-                    </a>
-                  </div>
-                </div>
+                <TransactionReceiptCard
+                  txHash={lastTxHash}
+                  label="Clinical Trial Published"
+                  sublabel={`Criteria Registered: ICD-10 ${diseaseCode} (${getDiseaseName(diseaseCode)})`}
+                  statusBadge="Active on Midnight"
+                  trialIdHash={trialHexId}
+                />
               )}
             </div>
           )}
@@ -572,34 +552,13 @@ export const ResearchLabPage: React.FC = () => {
           {lastTxHash && lastTxType === 'cancel' && (
             <div className="notice success" style={{ marginTop: '12px' }}>
               <div>{message}</div>
-              <div className="tx-hash-box">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                  <span className="beacon-dot online" />
-                  <span className="tx-label">Cancellation Tx:</span>
-                  <code title={lastTxHash}>
-                    {lastTxHash.slice(0, 10)}…{lastTxHash.slice(-8)}
-                  </code>
-                </div>
-                <div className="tx-actions">
-                  <button
-                    type="button"
-                    className="tx-btn secondary"
-                    onClick={() => copyTxHash(lastTxHash)}
-                    title="Copy full transaction hash"
-                  >
-                    {copiedTx ? 'Copied!' : 'Copy'}
-                  </button>
-                  <a
-                    href={MIDNIGHT_CONFIG.explorerTxUrl(lastTxHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="tx-btn"
-                    title="View transaction on Midnight Preview Explorer"
-                  >
-                    Explorer ↗
-                  </a>
-                </div>
-              </div>
+              <TransactionReceiptCard
+                txHash={lastTxHash}
+                label="Trial Cancellation Receipt"
+                sublabel="Study status transitioned to Inactive on Midnight Ledger"
+                statusBadge="Deactivated"
+                variant="navy"
+              />
             </div>
           )}
         </section>
