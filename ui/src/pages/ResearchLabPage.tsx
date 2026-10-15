@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AppHeader, Arrow } from '../components/AppHeader';
 import { DynamicIcdSelect } from '../components/DynamicIcdSelect';
@@ -6,7 +6,7 @@ import { RowSkeleton } from '../components/Skeleton';
 import { useApp } from '../contexts/AppContext';
 import { usePageSeo } from '../hooks';
 import { getDiseaseName } from '../config/icdRegistry';
-import { getMembraneContract } from '../midnight/contract';
+import { getMembraneContract, getTrialStudySync } from '../midnight/contract';
 import { isContractConfigured, MIDNIGHT_CONFIG } from '../midnight/config';
 import { subscribeOnchainContract, type OnchainContractState } from '../midnight/onchainLedger';
 import {
@@ -114,6 +114,8 @@ export const ResearchLabPage: React.FC = () => {
   const [maxAge, setMaxAge] = useState<string>(urlMaxAge);
   const [trialHexId, setTrialHexId] = useState<string>(urlTrial);
 
+  const [resultsFilter, setResultsFilter] = useState<string>('ALL');
+  const [allNetworkTrials, setAllNetworkTrials] = useState<ApiRecord[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string>('');
   const [trials, setTrials] = useState<ApiRecord[]>([]);
@@ -175,10 +177,10 @@ export const ResearchLabPage: React.FC = () => {
     setStatus('loading');
     setMessage('');
     try {
-      const clean = diseaseCode.trim().toUpperCase();
-      const path = clean ? `/clinical-trials/index?diseaseCode=${encodeURIComponent(clean)}` : `/clinical-trials/index`;
-      const result = await apiRequest<{ data?: ApiRecord[] }>(path);
+      // Fetch all indexed clinical trials across the Midnight network
+      const result = await apiRequest<{ data?: ApiRecord[] }>('/clinical-trials/index');
       const list = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [];
+      setAllNetworkTrials(list);
       setTrials(list);
       setStatus('success');
       void fetchTrialStatuses(list);
@@ -186,11 +188,34 @@ export const ResearchLabPage: React.FC = () => {
       setStatus('error');
       setMessage(error instanceof Error ? error.message : 'Could not load requests.');
     }
-  }, [diseaseCode, fetchTrialStatuses]);
+  }, [fetchTrialStatuses]);
 
   useEffect(() => {
     void loadTrials();
   }, [loadTrials]);
+
+  const displayedTrials = useMemo(() => {
+    if (resultsFilter === 'ALL') return allNetworkTrials;
+    return allNetworkTrials.filter(
+      (t) => text(t, ['diseaseCode', 'icd'], '').toUpperCase() === resultsFilter.toUpperCase(),
+    );
+  }, [allNetworkTrials, resultsFilter]);
+
+  const filterOptions = useMemo(() => {
+    const counts: Record<string, number> = { ALL: allNetworkTrials.length };
+    allNetworkTrials.forEach((t) => {
+      const code = text(t, ['diseaseCode', 'icd'], '').toUpperCase();
+      if (code) {
+        counts[code] = (counts[code] || 0) + 1;
+      }
+    });
+    const keySet = new Set(['ALL', 'K30', 'A15', 'B18', ...Object.keys(counts)]);
+    return Array.from(keySet).map((key) => ({
+      key,
+      label: key === 'ALL' ? 'All Cohorts' : `ICD ${key}`,
+      count: counts[key] || 0,
+    }));
+  }, [allNetworkTrials]);
 
   const handleDeactivateTrial = async (hex: string) => {
     if (!hex) return;
@@ -569,6 +594,7 @@ export const ResearchLabPage: React.FC = () => {
               <span>02</span>
               <div>
                 <h2>Indexed requests</h2>
+                <p>Public clinical trial cohort requests indexed on the Midnight network.</p>
               </div>
             </div>
             <button type="button" className="text-button" onClick={loadTrials}>
@@ -576,15 +602,34 @@ export const ResearchLabPage: React.FC = () => {
             </button>
           </div>
 
-          {status === 'loading' && trials.length === 0 ? (
+          {/* Diagnostic Category Filter Bar */}
+          <div className="filter-pill-bar">
+            {filterOptions.map(({ key, label, count: pillCount }) => {
+              const isSelected = resultsFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`filter-pill-btn ${isSelected ? 'active' : ''}`}
+                  onClick={() => setResultsFilter(key)}
+                >
+                  {label}
+                  <span className="pill-count">{pillCount}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {status === 'loading' && allNetworkTrials.length === 0 ? (
             <RowSkeleton count={3} />
-          ) : trials.length ? (
+          ) : displayedTrials.length ? (
             <div className="rows">
-              {trials.map((trial, index) => {
+              {displayedTrials.map((trial, index) => {
                 const hex = text(trial, ['trialHexId', 'hexId', 'id'], String(index));
-                const code = text(trial, ['diseaseCode', 'icd'], diseaseCode);
+                const code = text(trial, ['diseaseCode', 'icd'], 'K30');
                 const isActive = trialStatuses[hex] !== false;
                 const isDeactivating = deactivatingHex === hex;
+                const study = getTrialStudySync(hex, code);
 
                 return (
                   <div
@@ -593,13 +638,22 @@ export const ResearchLabPage: React.FC = () => {
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}
                   >
                     <span className="row-icon">CT</span>
-                    <div style={{ flex: 1 }}>
-                      <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
-                      <small>
-                        Trial ID: {hex.slice(0, 16)}… • ICD {code}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
+                        <span className="cohort-badge highlight">ICD-10 {code}</span>
+                        <span className="cohort-badge">Min. {study.minCohort} patients</span>
+                        <span className="cohort-badge">Ages {study.minAge}–{study.maxAge}</span>
+                        <span className="cohort-badge sites">
+                          {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
+                        </span>
+                      </div>
+                      <small style={{ marginTop: '4px' }}>
+                        Trial ID: <code style={{ fontFamily: 'monospace' }}>{hex.slice(0, 16)}…{hex.slice(-6)}</code> • Sponsor:{' '}
+                        <code style={{ fontFamily: 'monospace' }}>{(study.researchLabIdHash || '0x...').slice(0, 12)}…</code>
                       </small>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
                       <span className={`status-pill ${isActive ? 'active' : 'inactive'}`}>
                         <span className="status-dot" />
                         {isActive ? 'Active' : 'Closed'}
@@ -625,7 +679,11 @@ export const ResearchLabPage: React.FC = () => {
           ) : (
             <div className="empty">
               <strong>No requests found</strong>
-              <span>Publish a request or refresh the index.</span>
+              <span>
+                {resultsFilter === 'ALL'
+                  ? 'No clinical trial requests have been indexed yet. Publish a request above.'
+                  : `No clinical trials found matching filter ICD ${resultsFilter}.`}
+              </span>
             </div>
           )}
         </section>

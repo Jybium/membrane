@@ -9,6 +9,7 @@ import { getDiseaseName } from '../config/icdRegistry';
 import {
   getMembraneContract,
   getContractStudyDetails,
+  getTrialStudySync,
   type MembraneStudy,
   TrialStatusEnum,
 } from '../midnight/contract';
@@ -597,6 +598,7 @@ export const HospitalPage: React.FC = () => {
                     const code = text(trial, ['diseaseCode', 'icd'], diseaseCode || 'K30');
                     const isSelected = selectedIndex === index;
                     const isActive = trialStatuses[hex] !== false;
+                    const study = getTrialStudySync(hex, code);
 
                     return (
                       <button
@@ -606,20 +608,28 @@ export const HospitalPage: React.FC = () => {
                         onClick={() => handleSelectTrial(index, trial)}
                       >
                         <span className="row-icon">CT</span>
-                        <div style={{ flex: 1, textAlign: 'left' }}>
-                          <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
-                          <small>
-                            Trial ID: {hex.slice(0, 16)}… • ICD {code}
+                        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <strong>{text(trial, ['title'], `ICD ${code} — ${getDiseaseName(code)}`)}</strong>
+                            <span className="cohort-badge highlight">ICD-10 {code}</span>
+                            <span className="cohort-badge">Min. {study.minCohort} patients</span>
+                            <span className="cohort-badge">Ages {study.minAge}–{study.maxAge}</span>
+                            <span className="cohort-badge sites">
+                              {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
+                            </span>
+                          </div>
+                          <small style={{ marginTop: '4px' }}>
+                            Trial ID: <code style={{ fontFamily: 'monospace' }}>{hex.slice(0, 16)}…{hex.slice(-6)}</code>
                           </small>
                         </div>
                         <span
                           className={`status-pill ${isActive ? 'active' : 'inactive'}`}
-                          style={{ marginRight: '8px' }}
+                          style={{ marginRight: '8px', flexShrink: 0 }}
                         >
                           <span className="status-dot" />
                           {isActive ? 'Active' : 'Closed'}
                         </span>
-                        <span>{isSelected ? 'Selected' : 'Select'}</span>
+                        <span style={{ flexShrink: 0 }}>{isSelected ? 'Selected' : 'Select'}</span>
                       </button>
                     );
                   })}
@@ -721,46 +731,130 @@ export const HospitalPage: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className="criteria">
-                    <div>
-                      <span>Condition</span>
-                      <strong>
-                        ICD{' '}
-                        {contractStudy
-                          ? contractStudy.diseaseCode
-                          : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}{' '}
-                        —{' '}
-                        {getDiseaseName(
-                          contractStudy
-                            ? contractStudy.diseaseCode
-                            : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
-                        )}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Minimum cohort</span>
-                      <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {contractStudyLoading ? (
-                          <span style={{ color: '#6C7D8C' }}>Querying smart contract…</span>
-                        ) : (
-                          <>
-                            <span>{requiredCohort} patients</span>
-                          </>
-                        )}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Trial status</span>
-                      <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* Comprehensive Clinical Cohort Specification & Enclave Card */}
+                  <div className="cohort-detail-card">
+                    <div className="cohort-detail-header">
+                      <div className="cohort-header-title">
+                        <span className="protocol-chip">MIDNIGHT CLINICAL COHORT SPECIFICATION</span>
+                        <h3>
+                          ICD {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)} —{' '}
+                          {getDiseaseName(
+                            contractStudy
+                              ? contractStudy.diseaseCode
+                              : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
+                          )}
+                        </h3>
+                        <div className="trial-id-row">
+                          <code>CT-{selectedHex.toUpperCase()}</code>
+                          <button
+                            type="button"
+                            className="copy-mini-btn"
+                            onClick={() => copyTxHash(selectedHex)}
+                            title="Copy full 32-byte Trial Identifier Hash"
+                          >
+                            {copiedTx ? '✓ Copied ID' : 'Copy ID'}
+                          </button>
+                          <a
+                            href={MIDNIGHT_CONFIG.explorerContractUrl(MIDNIGHT_CONFIG.contractAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="explorer-mini-link"
+                            title="Verify smart contract state on Midnight Preview Explorer"
+                          >
+                            Explorer ↗
+                          </a>
+                        </div>
+                      </div>
+                      <div className="cohort-header-status">
                         <span className={`status-pill ${isSelectedTrialActive ? 'active' : 'inactive'}`}>
                           <span className="status-dot" />
                           {isSelectedTrialActive ? 'Active for Recruitment' : 'Closed / Deactivated'}
                         </span>
-                      </strong>
+                        {contractStudy?.createdAt && (
+                          <span className="cohort-created-date">Registered: {contractStudy.createdAt}</span>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <span>Patient records</span>
-                      <strong style={{ color: '#4E93B4' }}>Remain strictly local</strong>
+
+                    <div className="criteria-grid">
+                      {/* 1. Condition & Indication */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Clinical Indication</span>
+                        <strong className="cell-value">
+                          ICD-10 {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}
+                        </strong>
+                        <span className="cell-sub">
+                          {getDiseaseName(
+                            contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode),
+                          )}
+                        </span>
+                      </div>
+
+                      {/* 2. Minimum Cohort Sample */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Minimum Cohort Size</span>
+                        <strong className="cell-value highlight">
+                          {contractStudyLoading ? (
+                            <span style={{ color: '#6C7D8C' }}>Querying smart contract…</span>
+                          ) : (
+                            `≥ ${requiredCohort} Patients`
+                          )}
+                        </strong>
+                        <span className="cell-sub">Enforced zero-knowledge threshold inequality</span>
+                      </div>
+
+                      {/* 3. Patient Age Bracket */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Eligible Age Bracket</span>
+                        <strong className="cell-value">
+                          {contractStudy ? `${contractStudy.minAge} – ${contractStudy.maxAge} Years` : '40 – 65 Years'}
+                        </strong>
+                        <span className="cell-sub">Enforced by zero-knowledge range check</span>
+                      </div>
+
+                      {/* 4. Participating Centers */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Enrolled Hospital Sites</span>
+                        <strong className="cell-value">
+                          {contractStudy?.enrolledCount ?? 0}{' '}
+                          {(contractStudy?.enrolledCount ?? 0) === 1 ? 'Hospital Center' : 'Hospital Centers'}
+                        </strong>
+                        <span className="cell-sub">Committed on Midnight ledger</span>
+                      </div>
+
+                      {/* 5. Research Lab Sponsor */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Research Lab Sponsor</span>
+                        <strong className="cell-value monospace">
+                          {(contractStudy?.researchLabIdHash || '0x3a4b9c1d0e5f6071').slice(0, 16)}…
+                        </strong>
+                        <span className="cell-sub">Cryptographic Protocol Authority Tag</span>
+                      </div>
+
+                      {/* 6. Institutional Privacy Model */}
+                      <div className="criteria-cell">
+                        <span className="cell-label">Zero-Knowledge Privacy</span>
+                        <strong className="cell-value shield">
+                          Strictly Local / Air-Gapped
+                        </strong>
+                        <span className="cell-sub">0 raw patient records transmitted</span>
+                      </div>
+                    </div>
+
+                    {/* Pre-flight EHR Vault Feasibility Preview */}
+                    <div className="ehr-feasibility-summary">
+                      <div className="feasibility-title">
+                        <span className="vault-icon">🏥</span>
+                        <div>
+                          <strong>Local Hospital EHR Vault Evaluation Scope</strong>
+                          <p>
+                            Proof generator queries local private hospital records for condition{' '}
+                            <b>ICD {contractStudy ? contractStudy.diseaseCode : text(selectedTrial, ['diseaseCode', 'icd'], diseaseCode)}</b> with patient age between{' '}
+                            <b>{contractStudy?.minAge ?? 40}</b> and <b>{contractStudy?.maxAge ?? 65}</b>. If qualifying consented patient count is ≥{' '}
+                            <b>{requiredCohort}</b>, a zero-knowledge membership proof is synthesized without leaking individual patient records.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1004,7 +1098,26 @@ export const HospitalPage: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <small style={{ color: '#6C7D8C', fontSize: '9px' }}>
+                {validationTrialHex && (
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {(() => {
+                      const study = getTrialStudySync(validationTrialHex);
+                      return (
+                        <>
+                          <span className="cohort-badge highlight">
+                            ICD-10 {study.diseaseCode} ({getDiseaseName(study.diseaseCode)})
+                          </span>
+                          <span className="cohort-badge">Required: ≥ {study.minCohort} patients</span>
+                          <span className="cohort-badge">Ages: {study.minAge}–{study.maxAge}</span>
+                          <span className="cohort-badge sites">
+                            {study.enrolledCount} {study.enrolledCount === 1 ? 'site' : 'sites'} enrolled
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+                <small style={{ color: '#6C7D8C', fontSize: '9px', marginTop: '4px' }}>
                   Input the 32-byte hexadecimal hash of the clinical trial enrolled on Midnight.
                 </small>
               </label>

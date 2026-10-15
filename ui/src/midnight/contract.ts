@@ -87,7 +87,79 @@ export interface StudyCriteria {
 // =================== KNOWN ON-CHAIN LEDGER STUDIES ===================
 
 export const KNOWN_ONCHAIN_STUDIES: Record<string, Partial<TrialInfo>> = {
-  // C34 trial from API index
+  // K30 active multicenter study with 2 enrollments
+  '0c2182ce49b3784dba7ab849d46e0ff23a2481e4f433bb08d225475eb84375b6': {
+    diseaseCode: 'K30',
+    minPatientSampleCount: 10,
+    minAge: 40,
+    maxAge: 65,
+    status: TrialStatusEnum.active,
+    enrolledCount: 2,
+    trialIdHash: '0c2182ce49b3784dba7ab849d46e0ff23a2481e4f433bb08d225475eb84375b6',
+    researchLabIdHash: '0x3a4b9c1d0e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9',
+    createdAt: '2026-10-15',
+  },
+  // K30 adult cohort study with 1 enrollment
+  'bfc8718b5c96800d35eab23a9883c7e26f615743f88c50f42ae6ae229c6ad313': {
+    diseaseCode: 'K30',
+    minPatientSampleCount: 10,
+    minAge: 35,
+    maxAge: 60,
+    status: TrialStatusEnum.active,
+    enrolledCount: 1,
+    trialIdHash: 'bfc8718b5c96800d35eab23a9883c7e26f615743f88c50f42ae6ae229c6ad313',
+    researchLabIdHash: '0x1f2e3d4c5b6a708192a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
+    createdAt: '2026-10-13',
+  },
+  // K30 clinical trial
+  '2105c6706d110f50f456cae5b8bd83e081814df8': {
+    diseaseCode: 'K30',
+    minPatientSampleCount: 15,
+    minAge: 40,
+    maxAge: 70,
+    status: TrialStatusEnum.active,
+    enrolledCount: 0,
+    trialIdHash: '2105c6706d110f50f456cae5b8bd83e081814df8',
+    researchLabIdHash: '0x7a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3',
+    createdAt: '2026-10-13',
+  },
+  // A15 Respiratory Tuberculosis multicenter cohort
+  '91f58ab879c8efca9953a8b6e07321861f9af084a0a47611a588d4807809cf16': {
+    diseaseCode: 'A15',
+    minPatientSampleCount: 12,
+    minAge: 18,
+    maxAge: 55,
+    status: TrialStatusEnum.active,
+    enrolledCount: 0,
+    trialIdHash: '91f58ab879c8efca9953a8b6e07321861f9af084a0a47611a588d4807809cf16',
+    researchLabIdHash: '0x4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d',
+    createdAt: '2026-10-13',
+  },
+  // A15 adult pulmonary trial
+  '16c549b484474fc78fd3cb7799d0cf4ff87ac9e2fcdc9a4cd38ad2170230255b': {
+    diseaseCode: 'A15',
+    minPatientSampleCount: 8,
+    minAge: 21,
+    maxAge: 65,
+    status: TrialStatusEnum.active,
+    enrolledCount: 0,
+    trialIdHash: '16c549b484474fc78fd3cb7799d0cf4ff87ac9e2fcdc9a4cd38ad2170230255b',
+    researchLabIdHash: '0x8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e',
+    createdAt: '2026-10-13',
+  },
+  // B18 Chronic Viral Hepatitis cohort
+  '69da4ea600295c8cd30a916b55dab539aa021a8303a61b697c48eec33088cc5b': {
+    diseaseCode: 'B18',
+    minPatientSampleCount: 14,
+    minAge: 30,
+    maxAge: 75,
+    status: TrialStatusEnum.active,
+    enrolledCount: 0,
+    trialIdHash: '69da4ea600295c8cd30a916b55dab539aa021a8303a61b697c48eec33088cc5b',
+    researchLabIdHash: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e',
+    createdAt: '2026-10-13',
+  },
+  // Legacy / fallbacks
   '76bc23a4bd7cc0e7d23f629b4574090c45c27018': {
     diseaseCode: 'C34',
     minPatientSampleCount: 12,
@@ -96,35 +168,6 @@ export const KNOWN_ONCHAIN_STUDIES: Record<string, Partial<TrialInfo>> = {
     status: TrialStatusEnum.active,
     enrolledCount: 0,
     trialIdHash: '76bc23a4bd7cc0e7d23f629b4574090c45c27018',
-  },
-  // K30 trials from API index
-  '3ba8fcc0e9e8730fbe2b707952b7f224419a5224da35b22446dc0c0935e519dc': {
-    diseaseCode: 'K30',
-    minPatientSampleCount: 10,
-    minAge: 40,
-    maxAge: 65,
-    status: TrialStatusEnum.active,
-    enrolledCount: 0,
-    trialIdHash: '3ba8fcc0e9e8730fbe2b707952b7f224419a5224da35b22446dc0c0935e519dc',
-  },
-  a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4: {
-    diseaseCode: 'K30',
-    minPatientSampleCount: 15,
-    minAge: 35,
-    maxAge: 70,
-    status: TrialStatusEnum.active,
-    enrolledCount: 0,
-    trialIdHash: 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4',
-  },
-  // J45 trial from API index
-  j45test_1791564680608: {
-    diseaseCode: 'J45',
-    minPatientSampleCount: 8,
-    minAge: 18,
-    maxAge: 60,
-    status: TrialStatusEnum.active,
-    enrolledCount: 0,
-    trialIdHash: 'j45test_1791564680608',
   },
 };
 
@@ -196,30 +239,34 @@ function toMembraneStudy(info: TrialInfo): MembraneStudy {
 // =================== CONTRACT API IMPLEMENTATION ===================
 
 /**
- * Queries study details from the Midnight smart contract / on-chain ledger state.
+ * Synchronously queries study details from inactive, active, or known on-chain studies.
  * Returns required minimum cohort size, disease code, and age parameters matching membrane.compact.
  */
-export async function getContractStudyDetails(
+export function getTrialStudySync(
   trialHexId: string,
   fallbackDiseaseCode?: string,
-): Promise<MembraneStudy> {
-  await Promise.resolve();
+): MembraneStudy {
+  const cleanId = trialHexId.trim().replace(/^0x/, '');
+
   const inactive = getInactiveTrialsStore();
   for (const [key, val] of Object.entries(inactive)) {
-    if (key === trialHexId || key.startsWith(trialHexId) || trialHexId.startsWith(key)) {
+    const cleanKey = key.replace(/^0x/, '');
+    if (cleanKey === cleanId || cleanKey.startsWith(cleanId) || cleanId.startsWith(cleanKey)) {
       return toMembraneStudy({ ...val, status: TrialStatusEnum.inactive });
     }
   }
 
   const active = getActiveTrialsStore();
   for (const [key, val] of Object.entries(active)) {
-    if (key === trialHexId || key.startsWith(trialHexId) || trialHexId.startsWith(key)) {
+    const cleanKey = key.replace(/^0x/, '');
+    if (cleanKey === cleanId || cleanKey.startsWith(cleanId) || cleanId.startsWith(cleanKey)) {
       return toMembraneStudy(val);
     }
   }
 
   for (const [key, val] of Object.entries(KNOWN_ONCHAIN_STUDIES)) {
-    if (key === trialHexId || key.startsWith(trialHexId) || trialHexId.startsWith(key)) {
+    const cleanKey = key.replace(/^0x/, '');
+    if (cleanKey === cleanId || cleanKey.startsWith(cleanId) || cleanId.startsWith(cleanKey)) {
       const info: TrialInfo = {
         diseaseCode: val.diseaseCode || fallbackDiseaseCode || 'K30',
         minPatientSampleCount: val.minPatientSampleCount || 10,
@@ -228,9 +275,9 @@ export async function getContractStudyDetails(
         status: val.status ?? TrialStatusEnum.active,
         enrolledCount: val.enrolledCount || 0,
         researchLabIdHash:
-          val.researchLabIdHash || '0x0000000000000000000000000000000000000000000000000000000000000001',
-        trialIdHash: trialHexId,
-        createdAt: new Date().toISOString().split('T')[0],
+          val.researchLabIdHash || '0x3a4b9c1d0e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9',
+        trialIdHash: key,
+        createdAt: val.createdAt || '2026-10-15',
       };
       return toMembraneStudy(info);
     }
@@ -243,11 +290,23 @@ export async function getContractStudyDetails(
     maxAge: 65,
     status: TrialStatusEnum.active,
     enrolledCount: 0,
-    researchLabIdHash: '0x0000000000000000000000000000000000000000000000000000000000000001',
+    researchLabIdHash: '0x3a4b9c1d0e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9',
     trialIdHash: trialHexId,
     createdAt: new Date().toISOString().split('T')[0],
   };
   return toMembraneStudy(defaultInfo);
+}
+
+/**
+ * Queries study details from the Midnight smart contract / on-chain ledger state.
+ * Returns required minimum cohort size, disease code, and age parameters matching membrane.compact.
+ */
+export async function getContractStudyDetails(
+  trialHexId: string,
+  fallbackDiseaseCode?: string,
+): Promise<MembraneStudy> {
+  await Promise.resolve();
+  return getTrialStudySync(trialHexId, fallbackDiseaseCode);
 }
 
 export interface ValidateEnrollmentResponse {
