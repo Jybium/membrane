@@ -58,7 +58,7 @@ jobs:
         run: |
           npm run ci
 
-      - name: Compile bboard-ui
-        working-directory: bboard-ui
+      - name: Compile UI
+        working-directory: ui
         run: |
           npm run ci

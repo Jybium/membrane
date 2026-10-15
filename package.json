@@ -11,7 +11,7 @@
   "workspaces": {
     "packages": [
       "bboard-cli",
-      "bboard-ui",
+      "ui",
       "api",
       "contract"
     ]

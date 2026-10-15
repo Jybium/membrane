@@ -210,16 +210,29 @@ export const NetworkAuditorPage: React.FC = () => {
                     Re-verify
                   </button>
                 </div>
-                <p style={{ margin: '6px 0 2px', fontSize: 11, fontWeight: 700, color: onchainState.isDeployed ? '#10B981' : '#D9822B' }}>
+                <p
+                  style={{
+                    margin: '6px 0 2px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: onchainState.isDeployed ? '#10B981' : '#D9822B',
+                  }}
+                >
                   {onchainState.isDeployed ? '✓ Verified on Midnight Preview' : 'Checking Indexer...'}
                 </p>
                 <div style={{ fontSize: 9.5, color: '#556675', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span>State Size: <strong>{onchainState.stateBytesLength.toLocaleString()} bytes</strong></span>
+                  <span>
+                    State Size: <strong>{onchainState.stateBytesLength.toLocaleString()} bytes</strong>
+                  </span>
                   {onchainState.latestBlockHeight && (
-                    <span>Block Height: <strong>#{onchainState.latestBlockHeight.toLocaleString()}</strong></span>
+                    <span>
+                      Block Height: <strong>#{onchainState.latestBlockHeight.toLocaleString()}</strong>
+                    </span>
                   )}
                   {onchainState.latestTxId && (
-                    <span>Deployment Action Tx: <strong>#{onchainState.latestTxId}</strong></span>
+                    <span>
+                      Deployment Action Tx: <strong>#{onchainState.latestTxId}</strong>
+                    </span>
                   )}
                 </div>
               </div>
@@ -228,7 +241,15 @@ export const NetworkAuditorPage: React.FC = () => {
                 <span style={{ fontSize: 8, color: '#6C7D8C', fontWeight: 700, textTransform: 'uppercase' }}>
                   Auditor Wallet Session
                 </span>
-                <p style={{ margin: '6px 0 0', fontFamily: 'monospace', fontSize: 9.5, color: '#1A2A39', wordBreak: 'break-all' }}>
+                <p
+                  style={{
+                    margin: '6px 0 0',
+                    fontFamily: 'monospace',
+                    fontSize: 9.5,
+                    color: '#1A2A39',
+                    wordBreak: 'break-all',
+                  }}
+                >
                   {walletSession ? walletSession.address : 'Unconnected (read-only verification node)'}
                 </p>
               </div>

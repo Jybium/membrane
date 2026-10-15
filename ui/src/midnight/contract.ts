@@ -17,6 +17,7 @@
  * - getHospitalPatientsAggregate(): Uint<16>
  */
 
+import { Buffer } from 'buffer';
 import { setNetworkId, type NetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { type WalletSession } from './wallet';
 import { MIDNIGHT_CONFIG } from './config';
@@ -36,14 +37,10 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
 import { inMemoryPrivateStateProvider } from '../in-memory-private-state-provider';
 import type { UnboundTransaction } from '@midnight-ntwrk/midnight-js-types';
-import {
-  Contract as MembraneContract,
-  type Ledger,
-  type Witnesses,
-} from './compiled/membrane/contract/index.js';
+import { Contract as MembraneContract, type Ledger, type Witnesses } from './compiled/membrane/contract/index.js';
 
 try {
-  setNetworkId((MIDNIGHT_CONFIG.networkId || 'preview') as NetworkId);
+  setNetworkId(MIDNIGHT_CONFIG.networkId || 'preview');
 } catch {
   // Ignored if network id is already set
 }
@@ -253,6 +250,12 @@ export async function getContractStudyDetails(
   return toMembraneStudy(defaultInfo);
 }
 
+export interface ValidateEnrollmentResponse {
+  isValid: boolean;
+  txId: string;
+  signature?: string;
+}
+
 export interface MembraneContractApi {
   // Direct circuits from contract/membrane.compact
   createTrial: (
@@ -276,7 +279,10 @@ export interface MembraneContractApi {
 
   inactiveTrialDetail: (trialHexId: string) => Promise<TrialInfo | null>;
 
-  validateTrialEnrollment: (trialHexId: string) => Promise<boolean>;
+  validateTrialEnrollment: (
+    trialHexId: string,
+    privateKey?: string | Uint8Array,
+  ) => Promise<ValidateEnrollmentResponse>;
 
   // Backwards-compatible aliases
   createStudy: (
@@ -307,16 +313,40 @@ const witnesses: Witnesses<MembranePrivateState> = {
 const compiledMembraneContract = CompiledContract.make<MembraneContract<MembranePrivateState>>(
   'membrane',
   MembraneContract,
-).pipe(
-  CompiledContract.withWitnesses(witnesses),
-  CompiledContract.withCompiledFileAssets(''),
-);
+).pipe(CompiledContract.withWitnesses(witnesses), CompiledContract.withCompiledFileAssets(''));
 
 function stringToBytes32(s: string): Uint8Array {
   const enc = new TextEncoder().encode(s);
   const out = new Uint8Array(32);
   out.set(enc.slice(0, 32));
   return out;
+}
+
+export function trialHexToBytes(trialHexId: string): Uint8Array {
+  const clean = trialHexId.trim().replace(/^0x/, '');
+  if (!clean) {
+    throw new Error('Trial hex hash is required');
+  }
+  if (!/^[0-9a-fA-F]+$/.test(clean)) {
+    throw new Error('Trial hex hash must be a valid hex string');
+  }
+  // Convert hex to bytes using Buffer.from matching membrane.interact.ts
+  const buf = Buffer.from(clean, 'hex');
+  if (buf.length === 32) {
+    return new Uint8Array(buf);
+  }
+  const out = new Uint8Array(32);
+  out.set(buf.subarray(0, 32));
+  return out;
+}
+
+export function privateKeyToBytes32(key: string): Uint8Array {
+  const trimmed = key.trim();
+  const cleanHex = trimmed.replace(/^0x/, '');
+  if (cleanHex.length === 64 && /^[0-9a-fA-F]+$/.test(cleanHex)) {
+    return new Uint8Array(Buffer.from(cleanHex, 'hex'));
+  }
+  return stringToBytes32(trimmed);
 }
 
 function hexToBytes32(hex: string): Uint8Array {
@@ -351,8 +381,10 @@ async function createBrowserProviders(session: WalletSession) {
 
   // Ensure indexer queries target the preview indexer where the contract is deployed
   const proofServerUri = MIDNIGHT_CONFIG.proofServerUri || config.proverServerUri || 'http://localhost:6300';
-  const indexerUri = MIDNIGHT_CONFIG.indexerUri || config.indexerUri;
-  const indexerWsUri = MIDNIGHT_CONFIG.indexerWsUri || config.indexerWsUri;
+  const indexerUri =
+    MIDNIGHT_CONFIG.indexerUri || config.indexerUri || 'https://indexer.preview.midnight.network/api/v4/graphql';
+  const indexerWsUri =
+    MIDNIGHT_CONFIG.indexerWsUri || config.indexerWsUri || 'wss://indexer.preview.midnight.network/api/v4/graphql/ws';
 
   console.log('[Membrane Providers] Initializing providers with endpoints:', {
     proofServerUri,
@@ -362,7 +394,7 @@ async function createBrowserProviders(session: WalletSession) {
   });
 
   try {
-    setNetworkId((MIDNIGHT_CONFIG.networkId || 'preview') as NetworkId);
+    setNetworkId(MIDNIGHT_CONFIG.networkId || 'preview');
   } catch {
     // Ignored if already set
   }
@@ -422,7 +454,7 @@ async function createBrowserProviders(session: WalletSession) {
     privateStateProvider,
     zkConfigProvider: keyMaterialProvider,
     proofProvider: httpClientProofProvider(proofServerUri, keyMaterialProvider),
-    publicDataProvider: indexerPublicDataProvider(indexerUri, indexerWsUri, window.WebSocket),
+    publicDataProvider: indexerPublicDataProvider(indexerUri, indexerWsUri, window.WebSocket as any),
     walletProvider: {
       getCoinPublicKey(): string {
         return coinKey;
@@ -472,7 +504,8 @@ async function createBrowserProviders(session: WalletSession) {
             }
           }
           if (!detail || detail === '{}') {
-            detail = 'Wallet rejected or was unable to balance fees. Please verify your Lace wallet has DUST and is on Midnight Preview.';
+            detail =
+              'Wallet rejected or was unable to balance fees. Please verify your Lace wallet has DUST and is on Midnight Preview.';
           }
 
           if (/dust/i.test(detail) || /insufficient/i.test(detail)) {
@@ -562,9 +595,9 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
 
       const signer = session?.unshieldedAddress || session?.address || 'Simulated Lab Identity';
       const timestamp = new Date().toISOString();
-      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
-        b.toString(16).padStart(2, '0'),
-      ).join('');
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(
+        '',
+      );
 
       let txId: string;
       let signature: string | undefined;
@@ -664,13 +697,7 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           throw new Error(`Midnight Lace signing failed: ${msg}`);
         }
 
-        txId = await computeSignedTransactionHash(
-          'createTrial',
-          trialIdHash,
-          signature || '',
-          signer,
-          nonce,
-        );
+        txId = await computeSignedTransactionHash('createTrial', trialIdHash, signature || '', signer, nonce);
       } else {
         // Fallback for simulated development environments without Lace extension
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -734,9 +761,9 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
 
       const signer = session?.unshieldedAddress || session?.address || 'Simulated Lab Identity';
       const timestamp = new Date().toISOString();
-      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
-        b.toString(16).padStart(2, '0'),
-      ).join('');
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(
+        '',
+      );
 
       let txId: string;
       let signature: string | undefined;
@@ -827,13 +854,7 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           throw new Error(`Midnight Lace signing failed: ${msg}`);
         }
 
-        txId = await computeSignedTransactionHash(
-          'cancelTrial',
-          targetKey,
-          signature || '',
-          signer,
-          nonce,
-        );
+        txId = await computeSignedTransactionHash('cancelTrial', targetKey, signature || '', signer, nonce);
       } else {
         await new Promise((resolve) => setTimeout(resolve, 700));
         txId =
@@ -876,9 +897,9 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
 
       const signer = session?.unshieldedAddress || session?.address || 'Simulated Hospital Enclave';
       const timestamp = new Date().toISOString();
-      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
-        b.toString(16).padStart(2, '0'),
-      ).join('');
+      const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join(
+        '',
+      );
 
       let txId: string;
       let signature: string | undefined;
@@ -901,7 +922,7 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
             initialPrivateState: privateData,
           });
 
-          const trialIdBytes = hexToBytes32(study.trialIdHash);
+          const trialIdBytes = trialHexToBytes(study.trialIdHash);
           const finalizedTxData = await contract.callTx.trialEnrollment(trialIdBytes);
           txId = finalizedTxData.public.txHash;
           if (!txId.startsWith('0x')) {
@@ -972,18 +993,11 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           throw new Error(`Midnight Lace signing failed: ${msg}`);
         }
 
-        txId = await computeSignedTransactionHash(
-          'trialEnrollment',
-          study.trialIdHash,
-          signature || '',
-          signer,
-          nonce,
-        );
+        txId = await computeSignedTransactionHash('trialEnrollment', study.trialIdHash, signature || '', signer, nonce);
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 1400));
-        txId =
-          '0x' +
-          Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
+        throw new Error(
+          'Cannot register on-chain: Midnight Lace wallet extension is not connected. To broadcast this enrollment to the Midnight blockchain, please install and connect Midnight Lace on Midnight Preview with sufficient DUST to balance transaction fees.',
+        );
       }
 
       // Record enrollment in trialsEnrollments
@@ -1051,12 +1065,141 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
 
     /**
      * circuit validateTrialEnrollment(trialIdHash: Bytes<32>): Boolean
+     * Validates that the hospital holding the private key is enrolled in the specified trial.
+     * Takes trialIdHash (converted to bytes) and hospital private key bytes witness.
      */
-    async validateTrialEnrollment(trialHexId: string): Promise<boolean> {
-      await Promise.resolve();
-      const enrollments = getEnrollmentsStore();
-      const enrolled = enrollments[trialHexId] || [];
-      return enrolled.length > 0;
+    async validateTrialEnrollment(
+      trialHexId: string,
+      privateKey?: string | Uint8Array,
+    ): Promise<ValidateEnrollmentResponse> {
+      const cleanHex = trialHexId.trim().replace(/^0x/, '');
+      if (!cleanHex) {
+        throw new Error('Trial hex hash is required.');
+      }
+      if (!/^[0-9a-fA-F]+$/.test(cleanHex)) {
+        throw new Error('Trial hex hash must be a valid hex string.');
+      }
+
+      // Convert trial hex hash to bytes matching membrane.interact.ts: Buffer.from(trialIdHashHex, 'hex')
+      const trialIdBytes = trialHexToBytes(cleanHex);
+
+      let privKeyBytes: Uint8Array;
+      if (privateKey instanceof Uint8Array) {
+        privKeyBytes = privateKey;
+      } else if (typeof privateKey === 'string' && privateKey.trim().length > 0) {
+        privKeyBytes = privateKeyToBytes32(privateKey);
+      } else {
+        privKeyBytes = stringToBytes32(session?.unshieldedAddress || session?.address || 'Hospital1x09$!@');
+      }
+
+      const privateData: MembranePrivateState = {
+        privateKeyBytes: privKeyBytes,
+      };
+
+      // 1. On-chain execution via Midnight Lace and Proof Server if wallet is available
+      if (session?.api && typeof session.api.balanceUnsealedTransaction === 'function') {
+        try {
+          const providers = await createBrowserProviders(session);
+          const contract = await findDeployedContract(providers, {
+            contractAddress: MIDNIGHT_CONFIG.contractAddress,
+            compiledContract: compiledMembraneContract as any,
+            privateStateId: 'membranePrivateState',
+            initialPrivateState: privateData,
+          });
+
+          console.log(
+            '[Membrane validateTrialEnrollment] Calling circuit callTx.validateTrialEnrollment with trialIdBytes...',
+          );
+          const finalizedTxData = await contract.callTx.validateTrialEnrollment(trialIdBytes);
+          const result = finalizedTxData.private.result;
+          let txId = finalizedTxData.public.txHash;
+          if (txId && !txId.startsWith('0x')) {
+            txId = '0x' + txId;
+          }
+          console.log('[Membrane validateTrialEnrollment] On-chain transaction broadcast:', txId);
+          console.log('[Membrane validateTrialEnrollment] Circuit result:', result);
+          return {
+            isValid: Boolean(result),
+            txId,
+          };
+        } catch (err: any) {
+          console.error('[Membrane On-Chain validateTrialEnrollment Error]:', err);
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/Hospital is not enrolled in this trial/i.test(msg)) {
+            return {
+              isValid: false,
+              txId: '',
+            };
+          }
+          if (/Trial does not exist or has been cancelled/i.test(msg)) {
+            throw new Error('Trial does not exist on-chain or has been cancelled.');
+          }
+          if (/fetch|connection|refused|networkerror|failed to fetch/i.test(msg)) {
+            throw new Error(
+              `Zero-knowledge proving failed: Could not connect to local proof server at ${MIDNIGHT_CONFIG.proofServerUri}. Please ensure your Docker proof server is running on port 6300. (Details: ${msg})`,
+            );
+          }
+          if (/dust/i.test(msg)) {
+            throw new Error(
+              `Midnight Lace Dust balance insufficient: Lace requires Dust (derived from tNight) to balance transaction fees. Please verify your Lace wallet holds Dust. (Details: ${msg})`,
+            );
+          }
+          throw err;
+        }
+      } else if (session?.api && typeof session.api.signData === 'function') {
+        const signer = session?.unshieldedAddress || session?.address || 'Hospital';
+        const timestamp = new Date().toISOString();
+        const nonce = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) =>
+          b.toString(16).padStart(2, '0'),
+        ).join('');
+        const signingPayload = [
+          '=== MEMBRANE PROTOCOL: TRIAL ENROLLMENT VALIDATION ===',
+          `Network: ${MIDNIGHT_CONFIG.networkLabel} (${MIDNIGHT_CONFIG.networkId})`,
+          `Contract: ${MIDNIGHT_CONFIG.contractAddress}`,
+          `Action: validateTrialEnrollment`,
+          `Trial Identifier: CT-${cleanHex.slice(0, 16).toUpperCase()}`,
+          `Hospital Identity: ${signer}`,
+          `Timestamp: ${timestamp}`,
+          `Nonce: ${nonce}`,
+          '=====================================================',
+          'Approve to sign and validate trial enrollment on Midnight.',
+        ].join('\n');
+
+        let signature: string | undefined;
+        try {
+          const sig = await session.api.signData(signingPayload, {
+            encoding: 'text',
+            keyType: 'unshielded',
+          });
+          signature = sig.signature;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/cancel|reject|denied|declined/i.test(msg)) {
+            throw new Error('Validation was rejected or cancelled in Midnight Lace wallet.');
+          }
+          throw new Error(`Midnight Lace signing failed: ${msg}`);
+        }
+
+        const txId = await computeSignedTransactionHash(
+          'validateTrialEnrollment',
+          cleanHex,
+          signature || '',
+          signer,
+          nonce,
+        );
+
+        const enrollments = getEnrollmentsStore();
+        const enrolled = enrollments[cleanHex] || enrollments[trialHexId] || [];
+        return {
+          isValid: enrolled.length > 0,
+          txId,
+          signature,
+        };
+      } else {
+        throw new Error(
+          'Cannot validate on-chain: Midnight Lace wallet extension is not connected with DUST. Please connect Midnight Lace to validate trial enrollment on Midnight Preview.',
+        );
+      }
     },
 
     // Backwards-compatible aliases

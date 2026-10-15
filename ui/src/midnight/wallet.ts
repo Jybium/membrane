@@ -10,6 +10,7 @@ export interface WalletSession {
     nodeUri?: string;
   };
   api?: any;
+  isSimulated?: boolean;
 }
 
 export interface MidnightExtensionProvider {
@@ -18,14 +19,22 @@ export interface MidnightExtensionProvider {
   icon?: string;
   isEnabled?: () => Promise<boolean>;
   connect?: (networkId: string) => Promise<{
-    getShieldedAddresses?: () => Promise<{ shieldedAddress?: string; shieldedCoinPublicKey?: string; shieldedEncryptionPublicKey?: string }>;
+    getShieldedAddresses?: () => Promise<{
+      shieldedAddress?: string;
+      shieldedCoinPublicKey?: string;
+      shieldedEncryptionPublicKey?: string;
+    }>;
     getUnshieldedAddress?: () => Promise<string | { unshieldedAddress: string }>;
     signData?: (data: string, options: unknown) => Promise<{ data: string; signature: string; verifyingKey: string }>;
     balanceUnsealedTransaction?: (tx: string, options?: unknown) => Promise<{ tx: string }>;
     submitTransaction?: (tx: string) => Promise<void>;
   }>;
   enable?: () => Promise<{
-    getShieldedAddresses?: () => Promise<{ shieldedAddress?: string; shieldedCoinPublicKey?: string; shieldedEncryptionPublicKey?: string }>;
+    getShieldedAddresses?: () => Promise<{
+      shieldedAddress?: string;
+      shieldedCoinPublicKey?: string;
+      shieldedEncryptionPublicKey?: string;
+    }>;
     getUnshieldedAddress?: () => Promise<string | { unshieldedAddress: string }>;
     signData?: (data: string, options: unknown) => Promise<{ data: string; signature: string; verifyingKey: string }>;
     balanceUnsealedTransaction?: (tx: string, options?: unknown) => Promise<{ tx: string }>;
@@ -41,7 +50,10 @@ export function getMidnightProvider(): MidnightExtensionProvider | null {
   const win = window as unknown as { midnight?: Record<string, MidnightExtensionProvider> };
   if (!win.midnight || typeof win.midnight !== 'object') return null;
 
-  // Prioritize Lace if specifically registered
+  // Prioritize Lace (mnLace or lace) if specifically registered
+  if (win.midnight.mnLace && typeof win.midnight.mnLace === 'object') {
+    return win.midnight.mnLace;
+  }
   if (win.midnight.lace && typeof win.midnight.lace === 'object') {
     return win.midnight.lace;
   }
@@ -233,5 +245,6 @@ export async function connectWallet(): Promise<WalletSession> {
       proverServerUri: MIDNIGHT_CONFIG.proofServerUri,
       indexerUri: MIDNIGHT_CONFIG.indexerUri,
     },
+    isSimulated: true,
   };
 }

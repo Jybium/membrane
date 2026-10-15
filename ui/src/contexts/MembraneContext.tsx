@@ -53,7 +53,8 @@ interface MembraneContextType {
   ) => Promise<{ trialIdHex: string; txHash: string }>;
   cancelTrial: (trialIdHex: string) => Promise<{ txHash: string }>;
   enrollInTrial: (trialIdHex: string, patientAggregate: number) => Promise<{ txHash: string }>;
-  verifyEnrollment: (trialIdHex: string) => Promise<boolean>;
+  verifyEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
+  validateTrialEnrollment: (trialIdHex: string, privateKey?: string) => Promise<boolean>;
   // ZK Progress
   zkStatus: ZkStatus;
   setZkStatus: (status: ZkStatus) => void;
@@ -306,24 +307,36 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // 4. Verify Trial Enrollment Action
   const verifyEnrollment = useCallback(
-    async (trialIdHex: string): Promise<boolean> => {
+    async (trialIdHex: string, privateKey?: string): Promise<boolean> => {
       setZkStatus({
         step: 'generating-proof',
-        message: 'Running validateTrialEnrollment circuit proof...',
+        message: 'Witnessing hospital private key & running validateTrialEnrollment circuit...',
       });
 
-      // Direct smart contract circuit query
-      const contract = await getMembraneContract(walletSession);
-      const isEnrolled = await contract.validateTrialEnrollment(trialIdHex);
+      try {
+        // Direct smart contract circuit query
+        const contract = await getMembraneContract(walletSession);
+        const res = await contract.validateTrialEnrollment(trialIdHex, privateKey);
+        const isEnrolled = typeof res === 'boolean' ? res : res.isValid;
+        const txId = typeof res === 'object' && res ? res.txId : undefined;
 
-      setZkStatus({
-        step: 'confirmed',
-        message: isEnrolled
-          ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
-          : 'Verification FAILED: Hospital tag is not present in this trial enrollment set.',
-      });
+        setZkStatus({
+          step: 'confirmed',
+          message: isEnrolled
+            ? 'Verification SUCCESS: Hospital cryptographic public tag is confirmed in trial membership set.'
+            : 'Verification FAILED: Hospital is not enrolled in this trial on Midnight.',
+          txHash: txId,
+        });
 
-      return isEnrolled;
+        return isEnrolled;
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setZkStatus({
+          step: 'failed',
+          message: `Verification Error: ${msg}`,
+        });
+        throw err;
+      }
     },
     [walletSession],
   );
@@ -348,6 +361,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       cancelTrial,
       enrollInTrial,
       verifyEnrollment,
+      validateTrialEnrollment: verifyEnrollment,
       zkStatus,
       setZkStatus,
       resetZkStatus,

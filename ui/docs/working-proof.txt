@@ -104,7 +104,7 @@ The application separates roles by **Cryptographic Session** and **Portal Route*
 
 ### 4. Interactive Role & Hospital Switching in the App
 
-In [`bboard-ui/src/components/PortalSwitcherDialog.tsx`](file:///c:/Users/dell/software-engineering/projects/membrane/bboard-ui/src/components/PortalSwitcherDialog.tsx), role switching is already structured:
+In [`ui/src/components/PortalSwitcherDialog.tsx`](file:///c:/Users/dell/software-engineering/projects/membrane/ui/src/components/PortalSwitcherDialog.tsx), role switching is already structured:
 - `research-lab`: Research Sponsor Studio
 - `hospital`: Healthcare Provider Portal
 - `ledger-explorer`: Ledger & Protocol Auditor

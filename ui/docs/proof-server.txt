@@ -85,7 +85,7 @@ VITE_PROOF_SERVER_URI=https://prover.membrane.network
 ---
 
 #### Approach C: The Built-in Membrane Dual-Mode (Already in the UI)
-To make Membrane work out-of-the-box for any user—whether they have Docker running or not—we implemented a **Dual-Mode Prover Architecture** in [`bboard-ui/src/midnight/proofServer.ts`](file:///c:/Users/dell/software-engineering/projects/membrane/bboard-ui/src/midnight/proofServer.ts):
+To make Membrane work out-of-the-box for any user—whether they have Docker running or not—we implemented a **Dual-Mode Prover Architecture** in [`ui/src/midnight/proofServer.ts`](file:///c:/Users/dell/software-engineering/projects/membrane/ui/src/midnight/proofServer.ts):
 
 1. **Auto-Detection (`http://localhost:6300`)**:
    - The UI automatically pings port `6300` every 15 seconds.

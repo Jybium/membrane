@@ -22,7 +22,7 @@ bulletin-board/
 ├── api/                   # Methods, classes and types for CLI and UI
 ├── bboard-cli/            # Command-line interface
 │   └── src/               # CLI implementation
-└── bboard-ui/             # Web browser interface
+└── ui/                    # Web browser interface
     └── src/               # Web UI implementation
 ```
 
@@ -114,7 +114,7 @@ cd ..
 Only needed if you want to use the web interface:
 
 ```bash
-cd bboard-ui
+cd ui
 npm run build
 cd ..
 ```
@@ -220,7 +220,7 @@ docker ps
 The UI can run against preprod or preview networks:
 
 ```bash
-cd bboard-ui
+cd ui
 
 # For preprod network
 npm run build:start

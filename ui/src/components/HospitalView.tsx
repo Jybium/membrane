@@ -54,6 +54,9 @@ export const HospitalView: React.FC = () => {
   const [evaluations, setEvaluations] = useState<Record<string, HospitalEvaluation>>({});
   const [verifyingTrial, setVerifyingTrial] = useState<TrialItem | null>(null);
   const [verificationResult, setVerificationResult] = useState<boolean | null>(null);
+  const [verifyTrialHex, setVerifyTrialHex] = useState<string>('');
+  const [verifyPrivateKey, setVerifyPrivateKey] = useState<string>('Hospital1x09$!@');
+  const [isVerifyingProof, setIsVerifyingProof] = useState<boolean>(false);
   const [isReevaluating, setIsReevaluating] = useState<boolean>(false);
 
   // Evaluate each trial against the hospital's local EHR database
@@ -108,10 +111,23 @@ export const HospitalView: React.FC = () => {
     await enrollInTrial(trial.trialIdHex, aggregateCount);
   };
 
-  const handleVerify = async (trial: TrialItem) => {
+  const handleVerify = (trial: TrialItem) => {
     setVerifyingTrial(trial);
-    const result = await verifyEnrollment(trial.trialIdHex);
-    setVerificationResult(result);
+    setVerifyTrialHex(trial.trialIdHex);
+    setVerificationResult(null);
+  };
+
+  const executeVerify = async () => {
+    if (!verifyTrialHex.trim()) return;
+    setIsVerifyingProof(true);
+    try {
+      const result = await verifyEnrollment(verifyTrialHex.trim(), verifyPrivateKey.trim());
+      setVerificationResult(result);
+    } catch {
+      setVerificationResult(false);
+    } finally {
+      setIsVerifyingProof(false);
+    }
   };
 
   // Hospital Metrics
@@ -750,9 +766,51 @@ export const HospitalView: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', borderBottom: '1px solid #1e2230' }}>
-          Cryptographic Proof Verification
+          Cryptographic Trial Enrollment Verification
         </DialogTitle>
         <DialogContent dividers sx={{ borderColor: '#1e2230' }}>
+          <Box sx={{ mb: 2.5 }}>
+            <Typography variant="body2" sx={{ color: '#9ca3af', fontSize: '0.82rem', mb: 2 }}>
+              Validate hospital membership in the on-chain trial enrollment set (<code>validateTrialEnrollment</code>{' '}
+              circuit). The trial hex hash is converted to 32 bytes and evaluated against your hospital private key
+              witness.
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.8 }}>
+              <TextField
+                label="Trial Hex Hash"
+                size="small"
+                fullWidth
+                value={verifyTrialHex}
+                onChange={(e) => setVerifyTrialHex(e.target.value)}
+                placeholder="e.g. f006cbd0974d319413c265cef619d1ef6257cf7a2872af0e171e04bc8f773cff"
+                slotProps={{ htmlInput: { style: { fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' } } }}
+              />
+
+              <TextField
+                label="Hospital Private Key (Witness)"
+                size="small"
+                type="password"
+                fullWidth
+                value={verifyPrivateKey}
+                onChange={(e) => setVerifyPrivateKey(e.target.value)}
+                placeholder="e.g. Hospital1x09$!@"
+                helperText="Witnessed locally in memory via getPrivateKey(). Never revealed on-chain."
+                slotProps={{ htmlInput: { style: { fontFamily: 'JetBrains Mono, monospace', fontSize: '0.78rem' } } }}
+              />
+
+              <Button
+                variant="contained"
+                color="success"
+                onClick={() => void executeVerify()}
+                disabled={isVerifyingProof || !verifyTrialHex.trim() || !verifyPrivateKey.trim()}
+                sx={{ borderRadius: '8px', fontWeight: 600, py: 1 }}
+              >
+                {isVerifyingProof ? 'Evaluating ZK Proof…' : 'Validate Trial Enrollment'}
+              </Button>
+            </Box>
+          </Box>
+
           {verificationResult === true ? (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <Box
@@ -799,34 +857,38 @@ export const HospitalView: React.FC = () => {
                   variant="caption"
                   sx={{ fontFamily: 'JetBrains Mono, monospace', color: '#38bdf8', display: 'block' }}
                 >
-                  trialsEnrollments.lookup(trialId).member(hospitalTag) === true
+                  trialsEnrollments.lookup(trialIdBytes).member(hospitalTag) === true
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 600, display: 'block', mt: 0.6 }}>
                   ✓ In-Person Clinical Trial Protocol Authorized
                 </Typography>
               </Box>
             </Box>
-          ) : (
+          ) : verificationResult === false ? (
             <Box sx={{ textAlign: 'center', py: 2 }}>
               <WarningAmber sx={{ color: '#f59e0b', fontSize: 48, mb: 1.2 }} />
               <Typography variant="h6" sx={{ fontWeight: 700, color: '#fbbf24', mb: 0.8 }}>
                 Not Found in Enrollment Set
               </Typography>
               <Typography variant="body2" sx={{ color: '#8b92a5', fontSize: '0.82rem' }}>
-                This hospital identity tag is not currently registered in the trial&apos;s on-chain enrollment registry.
+                The hospital tag derived from this private key is not registered in the trial&apos;s on-chain enrollment
+                registry.
               </Typography>
             </Box>
-          )}
+          ) : null}
         </DialogContent>
         <DialogActions sx={{ p: 1.5 }}>
           <Button
-            onClick={() => setVerifyingTrial(null)}
+            onClick={() => {
+              setVerifyingTrial(null);
+              setVerificationResult(null);
+            }}
             color="primary"
             variant="contained"
             size="small"
             sx={{ px: 2.5, borderRadius: '8px', boxShadow: 'none !important' }}
           >
-            Done
+            Close
           </Button>
         </DialogActions>
       </Dialog>
