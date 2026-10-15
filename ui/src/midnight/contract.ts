@@ -478,7 +478,13 @@ async function createBrowserProviders(session: WalletSession) {
         coinKey = addresses.shieldedCoinPublicKey || '';
         encKey = addresses.shieldedEncryptionPublicKey || '';
       }
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/locked/i.test(msg)) {
+        throw new Error(
+          'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then try submitting again.',
+        );
+      }
       console.warn('[Membrane Providers] Could not read shielded addresses from wallet:', err);
     }
   }
@@ -579,6 +585,11 @@ async function createBrowserProviders(session: WalletSession) {
           if (/dust/i.test(detail) || /insufficient/i.test(detail)) {
             throw new Error(
               `Insufficient Dust in Midnight Lace: Midnight requires Dust to pay transaction fees. Please open Midnight Lace to generate DUST from your tNIGHT balance. (${detail})`,
+            );
+          }
+          if (/locked/i.test(detail)) {
+            throw new Error(
+              'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then try submitting again.',
             );
           }
           if (
@@ -759,6 +770,11 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           signature = sig.signature;
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
+          if (/locked/i.test(msg)) {
+            throw new Error(
+              'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then try submitting again.',
+            );
+          }
           if (/cancel|reject|denied|declined/i.test(msg)) {
             throw new Error('Transaction was rejected or cancelled in Midnight Lace wallet.');
           }
@@ -869,6 +885,11 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('Midnight Lace') || msg.includes('Insufficient Dust')) {
             throw err;
+          }
+          if (/locked/i.test(msg)) {
+            throw new Error(
+              'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then try submitting again.',
+            );
           }
           if (
             (err as any)?.code === 'Rejected' ||
@@ -1015,6 +1036,11 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
           const msg = err instanceof Error ? err.message : String(err);
           if (msg.includes('Midnight Lace') || msg.includes('Insufficient Dust')) {
             throw err;
+          }
+          if (/locked/i.test(msg)) {
+            throw new Error(
+              'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then try submitting again.',
+            );
           }
           if (
             (err as any)?.code === 'Rejected' ||

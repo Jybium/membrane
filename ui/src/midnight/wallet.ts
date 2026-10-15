@@ -179,7 +179,8 @@ export async function silentReconnectWallet(): Promise<WalletSession | null> {
       address = unshieldedAddress;
     }
     if (!address) {
-      address = 'mn_connected_wallet';
+      // Wallet is locked or not authorized: strictly do not create a fake session
+      return null;
     }
 
     return {
@@ -269,31 +270,85 @@ export async function connectWallet(): Promise<WalletSession> {
   let address = '';
   let unshieldedAddress = '';
   let shieldedAddress = '';
-
-  if (typeof api.getUnshieldedAddress === 'function') {
-    try {
-      const unshielded = await api.getUnshieldedAddress();
-      unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
-    } catch (e) {
-      console.debug('Error querying unshielded address:', e);
-    }
-  }
+  let isLocked = false;
 
   if (typeof api.getShieldedAddresses === 'function') {
     try {
       const state = await api.getShieldedAddresses();
       shieldedAddress = state?.shieldedAddress || '';
       address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
-    } catch (e) {
-      console.debug('Error querying shielded address:', e);
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/locked/i.test(msg)) {
+        isLocked = true;
+      }
+      console.warn('[Midnight Wallet] Error querying shielded address:', e);
+    }
+  }
+
+  if (!address && typeof api.getUnshieldedAddress === 'function') {
+    try {
+      const unshielded = await api.getUnshieldedAddress();
+      unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
+      if (unshieldedAddress) {
+        address = unshieldedAddress;
+      }
+    } catch (e: any) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/locked/i.test(msg)) {
+        isLocked = true;
+      }
+      console.warn('[Midnight Wallet] Error querying unshielded address:', e);
+    }
+  }
+
+  // If the wallet is locked or no address was returned, trigger the Midnight Lace extension dialog
+  if (isLocked || !address) {
+    console.log('[Midnight Wallet] Wallet locked or unauthenticated. Triggering Midnight Lace popup challenge...');
+    if (typeof api.signData === 'function') {
+      try {
+        const timestamp = new Date().toISOString();
+        await api.signData(
+          `Membrane Clinical Protocol\nAuthorize & unlock Midnight Lace wallet session.\nTimestamp: ${timestamp}`,
+          { encoding: 'text', keyType: 'unshielded' },
+        );
+
+        // After user unlocks in the popup dialog and approves, re-fetch addresses
+        if (typeof api.getShieldedAddresses === 'function') {
+          const state = await api.getShieldedAddresses();
+          shieldedAddress = state?.shieldedAddress || '';
+          address = state?.shieldedCoinPublicKey || state?.shieldedAddress || '';
+        }
+        if (!address && typeof api.getUnshieldedAddress === 'function') {
+          const unshielded = await api.getUnshieldedAddress();
+          unshieldedAddress = typeof unshielded === 'string' ? unshielded : unshielded?.unshieldedAddress || '';
+          if (unshieldedAddress) address = unshieldedAddress;
+        }
+      } catch (signErr: any) {
+        const signMsg = signErr instanceof Error ? signErr.message : String(signErr);
+        if (/cancel|reject|denied|declined/i.test(signMsg)) {
+          throw new Error('Connection request was cancelled in Midnight Lace wallet.');
+        }
+        if (/locked/i.test(signMsg)) {
+          throw new Error(
+            'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then click Connect wallet.',
+          );
+        }
+        throw new Error(
+          `Midnight Lace wallet is locked or not authenticated. Please click the Midnight Lace extension icon in your toolbar, unlock it, and try again. (${signMsg})`,
+        );
+      }
     }
   }
 
   if (!address && unshieldedAddress) {
     address = unshieldedAddress;
   }
+
   if (!address) {
-    address = 'mn_connected_wallet';
+    throw new Error(
+      'Midnight Lace wallet is locked. Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then click Connect wallet.',
+    );
   }
 
   console.log('[Midnight Wallet] Successfully connected to Midnight Lace! Address:', address);

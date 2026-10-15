@@ -201,6 +201,14 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return null;
       }
 
+      if (/locked/i.test(msg)) {
+        alert(
+          'Midnight Lace wallet is locked.\n\n' +
+            'Please click the Midnight Lace extension icon in your browser toolbar, enter your password to unlock the wallet, and then click "Connect wallet".',
+        );
+        return null;
+      }
+
       if (/not detected|install/i.test(msg)) {
         const confirmSim = window.confirm(
           'Midnight Lace wallet extension was not detected in your browser.\n\n' +
