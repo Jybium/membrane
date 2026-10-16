@@ -301,6 +301,17 @@ export const HospitalPage: React.FC = () => {
       return;
     }
 
+    if (!validationPrivateKey.trim()) {
+      setProofStatus('error');
+      const errText = 'Please input your hospital private key.';
+      setMessage(errText);
+      setZkStatus({
+        step: 'failed',
+        message: errText,
+      });
+      return;
+    }
+
     setProofStatus('loading');
     setMessage('');
 
@@ -852,6 +863,90 @@ export const HospitalPage: React.FC = () => {
                         <span className="cell-sub">0 raw patient records transmitted</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Hospital Private Key (Witness) Configuration for Multi-Hospital Platform */}
+                  <div
+                    style={{
+                      background: '#FAF8F4',
+                      border: '1px solid #DFD9CD',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '18px',
+                    }}
+                  >
+                    <label style={{ display: 'block' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: '#1A2A39', fontSize: '13px' }}>
+                          Hospital Private Key (Witness)
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#6C7D8C', fontWeight: 500 }}>
+                          Multi-Hospital Identity
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type={showPrivateKey ? 'text' : 'password'}
+                          value={validationPrivateKey}
+                          onChange={(e) => setValidationPrivateKey(e.target.value)}
+                          placeholder="e.g. Hospital1x09$!@"
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '11px',
+                            flex: 1,
+                            padding: '0 11px',
+                            height: '40px',
+                            border: '1px solid #DDD7CB',
+                            borderRadius: '7px',
+                            background: '#FFFFFF',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPrivateKey(!showPrivateKey)}
+                          style={{
+                            padding: '0 12px',
+                            height: '40px',
+                            border: '1px solid #DDD7CB',
+                            borderRadius: '7px',
+                            background: '#FFFFFF',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {showPrivateKey ? 'Hide Key' : 'Show Key'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setValidationPrivateKey('Hospital1x09$!@')}
+                          title="Fill default hospital private key from membrane.interact.ts"
+                          style={{
+                            padding: '0 12px',
+                            height: '40px',
+                            border: '1px solid #DDD7CB',
+                            borderRadius: '7px',
+                            background: '#FFFFFF',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Fill Demo Key
+                        </button>
+                      </div>
+                      <small style={{ color: '#6C7D8C', fontSize: '10px', marginTop: '6px', display: 'block' }}>
+                        Supplied locally to <code>getPrivateKey()</code> witness circuit to derive your hospital anonymous public identity and commit your enrollment to Midnight.
+                      </small>
+                    </label>
                   </div>
 
                   {proofStatus === 'success' ? (
