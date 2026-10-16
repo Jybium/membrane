@@ -323,9 +323,13 @@ export interface MembraneContractApi {
     maxAge: number,
     minPatientSampleCount: number,
     privateTrialTag?: string,
+    researchLabPrivateKey?: string | Uint8Array,
   ) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
 
-  cancelTrial: (trialHexId?: string) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
+  cancelTrial: (
+    trialHexId?: string,
+    researchLabPrivateKey?: string | Uint8Array,
+  ) => Promise<{ txId: string; trialHexId: string; signature?: string }>;
 
   trialEnrollment: (
     trialHexId: string,
@@ -655,6 +659,7 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
       maxAge: number,
       minPatientSampleCount: number,
       privateTrialTag?: string,
+      researchLabPrivateKey?: string | Uint8Array,
     ): Promise<{ txId: string; trialHexId: string; signature?: string }> {
       if (minPatientSampleCount <= 0) {
         throw new Error('Minimum patient sample count must be greater than 0');
@@ -685,7 +690,12 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
       if (session?.api && typeof session.api.balanceUnsealedTransaction === 'function') {
         try {
           const providers = await createBrowserProviders(session);
-          const privKeyBytes = stringToBytes32(session.unshieldedAddress || session.address || 'ResearchLab1x09$!@');
+          const privKeyBytes =
+            researchLabPrivateKey instanceof Uint8Array
+              ? researchLabPrivateKey
+              : typeof researchLabPrivateKey === 'string' && researchLabPrivateKey.trim().length > 0
+                ? privateKeyToBytes32(researchLabPrivateKey.trim())
+                : stringToBytes32(session.unshieldedAddress || session.address || 'ResearchLab1x09$!@');
           const tagBytes = stringToBytes32(privateTrialTag || `RL-${Date.now().toString(36)}`);
 
           const privateData: MembranePrivateState = {
@@ -817,7 +827,10 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
      * circuit cancelTrial(): Bytes<32>
      * Submits on-chain Zero-Knowledge trial deactivation balanced with tNight via Midnight Lace.
      */
-    async cancelTrial(trialHexId?: string): Promise<{ txId: string; trialHexId: string; signature?: string }> {
+    async cancelTrial(
+      trialHexId?: string,
+      researchLabPrivateKey?: string | Uint8Array,
+    ): Promise<{ txId: string; trialHexId: string; signature?: string }> {
       const active = getActiveTrialsStore();
       const inactive = getInactiveTrialsStore();
 
@@ -860,7 +873,12 @@ export function createMembraneContract(session?: WalletSession | null): Membrane
       if (session?.api && typeof session.api.balanceUnsealedTransaction === 'function') {
         try {
           const providers = await createBrowserProviders(session);
-          const privKeyBytes = stringToBytes32(session.unshieldedAddress || session.address || 'ResearchLab1x09$!@');
+          const privKeyBytes =
+            researchLabPrivateKey instanceof Uint8Array
+              ? researchLabPrivateKey
+              : typeof researchLabPrivateKey === 'string' && researchLabPrivateKey.trim().length > 0
+                ? privateKeyToBytes32(researchLabPrivateKey.trim())
+                : stringToBytes32(session.unshieldedAddress || session.address || 'ResearchLab1x09$!@');
           const tagBytes = stringToBytes32(targetKey || `RL-${Date.now().toString(36)}`);
 
           const privateData: MembranePrivateState = {
