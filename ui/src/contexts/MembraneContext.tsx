@@ -61,8 +61,9 @@ interface MembraneContextType {
     minAge: number,
     maxAge: number,
     minPatientSampleCount: number,
+    researchLabPrivateKey?: string,
   ) => Promise<{ trialIdHex: string; txHash: string }>;
-  cancelTrial: (trialIdHex: string) => Promise<{ txHash: string }>;
+  cancelTrial: (trialIdHex: string, researchLabPrivateKey?: string) => Promise<{ txHash: string }>;
   enrollInTrial: (
     trialIdHex: string,
     patientAggregate: number,
@@ -282,6 +283,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       minAge: number,
       maxAge: number,
       minPatientSampleCount: number,
+      researchLabPrivateKey?: string,
     ): Promise<{ trialIdHex: string; txHash: string }> => {
       let sessionToUse = walletSession;
       if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
@@ -309,7 +311,14 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Direct smart contract circuit invocation
       const contract = await getMembraneContract(sessionToUse);
-      const contractRes = await contract.createTrial(diseaseCode, minAge, maxAge, minPatientSampleCount);
+      const contractRes = await contract.createTrial(
+        diseaseCode,
+        minAge,
+        maxAge,
+        minPatientSampleCount,
+        undefined,
+        researchLabPrivateKey,
+      );
       const trialIdHex = contractRes.trialHexId;
       const txHash = contractRes.txId;
 
@@ -361,7 +370,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // 2. Cancel Trial Action (Opens ZkProgressModal for ZK proof deactivation & broadcast)
   const cancelTrial = useCallback(
-    async (trialIdHex: string): Promise<{ txHash: string }> => {
+    async (trialIdHex: string, researchLabPrivateKey?: string): Promise<{ txHash: string }> => {
       let sessionToUse = walletSession;
       if (!sessionToUse?.api && !sessionToUse?.isSimulated) {
         const fresh = await connectWallet();
@@ -381,7 +390,7 @@ export const MembraneProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Direct smart contract circuit invocation
       const contract = await getMembraneContract(sessionToUse);
-      const contractRes = await contract.cancelTrial(trialIdHex);
+      const contractRes = await contract.cancelTrial(trialIdHex, researchLabPrivateKey);
       const txHash = contractRes.txId;
 
       setZkStatus({

@@ -113,6 +113,8 @@ export const ResearchLabPage: React.FC = () => {
   const [minAge, setMinAge] = useState<string>(urlMinAge);
   const [maxAge, setMaxAge] = useState<string>(urlMaxAge);
   const [trialHexId, setTrialHexId] = useState<string>(urlTrial);
+  const [labPrivateKey, setLabPrivateKey] = useState<string>('ResearchLab1x09$!@');
+  const [showPrivateKey, setShowPrivateKey] = useState<boolean>(false);
 
   const [resultsFilter, setResultsFilter] = useState<string>('ALL');
   const [allNetworkTrials, setAllNetworkTrials] = useState<ApiRecord[]>([]);
@@ -249,7 +251,7 @@ export const ResearchLabPage: React.FC = () => {
         }
       }
       const contract = await getMembraneContract(sessionToUse);
-      const res = await contract.cancelTrial(hex);
+      const res = await contract.cancelTrial(hex, labPrivateKey.trim());
       setTrialStatuses((prev) => ({ ...prev, [hex]: false }));
       setLastTxHash(res.txId);
       setLastTxType('cancel');
@@ -351,8 +353,25 @@ export const ResearchLabPage: React.FC = () => {
         }
       }
 
+      if (!labPrivateKey.trim()) {
+        setStatus('error');
+        setMessage('Please input your research lab private key.');
+        setZkStatus({
+          step: 'failed',
+          message: 'Research lab private key is required to witness trial ownership.',
+        });
+        return;
+      }
+
       const contract = await getMembraneContract(sessionToUse);
-      const result = await contract.createTrial(diseaseCode, minAgeNum, maxAgeNum, minCohortNum);
+      const result = await contract.createTrial(
+        diseaseCode,
+        minAgeNum,
+        maxAgeNum,
+        minCohortNum,
+        undefined,
+        labPrivateKey.trim(),
+      );
       hexId = result.trialHexId;
       txHash = result.txId;
 
@@ -522,6 +541,68 @@ export const ResearchLabPage: React.FC = () => {
                 min={0}
                 max={120}
               />
+            </label>
+
+            <label className="wide">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 600, color: '#1A2A39' }}>Research Lab Private Key (Witness)</span>
+                <span style={{ fontSize: '10px', color: '#6C7D8C', fontWeight: 500 }}>Multi-Lab Identity</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type={showPrivateKey ? 'text' : 'password'}
+                  value={labPrivateKey}
+                  onChange={(e) => setLabPrivateKey(e.target.value)}
+                  placeholder="e.g. ResearchLab1x09$!@"
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    flex: 1,
+                    padding: '0 11px',
+                    height: '40px',
+                    border: '1px solid #DDD7CB',
+                    borderRadius: '7px',
+                    background: '#FAF8F4',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPrivateKey(!showPrivateKey)}
+                  style={{
+                    padding: '0 12px',
+                    height: '40px',
+                    border: '1px solid #DDD7CB',
+                    borderRadius: '7px',
+                    background: '#FAF8F4',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {showPrivateKey ? 'Hide Key' : 'Show Key'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLabPrivateKey('ResearchLab1x09$!@')}
+                  title="Fill default research lab private key from membrane.interact.ts"
+                  style={{
+                    padding: '0 12px',
+                    height: '40px',
+                    border: '1px solid #DDD7CB',
+                    borderRadius: '7px',
+                    background: '#FAF8F4',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Fill Demo Key
+                </button>
+              </div>
+              <small style={{ color: '#6C7D8C', fontSize: '10px', marginTop: '4px', display: 'block' }}>
+                Supplied locally to <code>getPrivateKey()</code> witness circuit to derive your anonymous research lab identity (<code>researchLabIdHash</code>) and authorize trial creation &amp; cancellation on Midnight.
+              </small>
             </label>
           </div>
 
